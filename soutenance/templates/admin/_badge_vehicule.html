@@ -1,0 +1,7 @@
+{% if vehicule.etat == 'disponible' %}
+  <span class="badge bg-success">Au parking</span>
+{% elif vehicule.etat == 'affecte' %}
+  <span class="badge bg-warning text-dark">Affecté</span>
+{% else %}
+  <span class="badge bg-danger">Maintenance</span>
+{% endif %}

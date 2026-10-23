@@ -1,0 +1,25 @@
+{% extends 'admin/base_admin.html' %}
+{% block titre_admin %}Paramètres{% endblock %}
+{% block contenu_admin %}
+<h3 class="page-title">Paramètres</h3>
+
+<div class="card shadow-sm">
+  <div class="card-header admin-card-header">Mon compte administrateur</div>
+  <div class="card-body p-4">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Nom</dt>
+      <dd class="col-sm-9">{{ user.prenom }} {{ user.nom }}</dd>
+      <dt class="col-sm-3">Email</dt>
+      <dd class="col-sm-9">{{ user.email }}</dd>
+      <dt class="col-sm-3">Téléphone</dt>
+      <dd class="col-sm-9">{{ user.telephone|default:"—" }}</dd>
+      <dt class="col-sm-3">Membre depuis</dt>
+      <dd class="col-sm-9">{{ user.date_creation|date:"d/m/Y" }}</dd>
+    </dl>
+  </div>
+</div>
+
+<div class="alert alert-info mt-3 mb-0">
+  <i class="fa-solid fa-circle-info"></i> D'autres réglages (préférences de notification, gestion des points relais, etc.) pourront être ajoutés ici.
+</div>
+{% endblock %}

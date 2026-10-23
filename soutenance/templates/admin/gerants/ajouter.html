@@ -1,0 +1,43 @@
+{% extends 'admin/base_admin.html' %}
+{% block titre_admin %}Ajouter un gérant{% endblock %}
+{% block contenu_admin %}
+<nav class="small mb-2"><a href="{% url 'livraison:liste_gerants' %}" class="text-decoration-none" style="color:#1a237e;"><i class="fa-solid fa-arrow-left"></i> Gérants</a></nav>
+<h3 class="page-title">Ajouter un gérant</h3>
+
+<div class="card shadow-sm" style="max-width:720px;">
+  <div class="card-header admin-card-header"><i class="fa-solid fa-user-plus"></i> Nouveau compte gérant</div>
+  <div class="card-body p-4">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label for="prenom" class="form-label fw-semibold">Prénom <span class="text-danger">*</span></label>
+          <input type="text" id="prenom" name="prenom" value="{{ donnees.prenom }}" class="form-control" maxlength="100" required>
+        </div>
+        <div class="col-md-6">
+          <label for="nom" class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+          <input type="text" id="nom" name="nom" value="{{ donnees.nom }}" class="form-control" maxlength="100" required>
+        </div>
+        <div class="col-md-6">
+          <label for="email" class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+          <input type="email" id="email" name="email" value="{{ donnees.email }}" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label for="telephone" class="form-label fw-semibold">Téléphone <span class="text-danger">*</span></label>
+          <input type="tel" id="telephone" name="telephone" value="{{ donnees.telephone }}" class="form-control" maxlength="20" required>
+        </div>
+      </div>
+
+      <div class="alert alert-primary d-flex gap-2 mb-4" style="background:#e8eaf6;border-color:#c5cae9;color:#1a237e;">
+        <i class="fa-solid fa-circle-info mt-1"></i>
+        <div>Le mot de passe provisoire sera l'adresse email du gérant.<br>Il devra le changer à sa première connexion.</div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-admin"><i class="fa-solid fa-check"></i> Créer le compte</button>
+        <a href="{% url 'livraison:liste_gerants' %}" class="btn btn-secondary">Annuler</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends 'client/base_client.html' %}
+{% block titre %}Notifications{% endblock %}
+{% block contenu %}
+<h3 class="page-title mb-4">Notifications</h3>
+
+{% if notifications %}
+<div class="cli-card">
+  {% for n in notifications %}
+  <div class="d-flex align-items-start gap-3 p-3 {% if not forloop.last %}border-bottom{% endif %}">
+    <div class="fs-4">
+      {% if 'annulée' in n.titre or 'annulé' in n.titre %}❌
+      {% elif 'modifiée' in n.titre %}✏️
+      {% elif 'livraison' in n.titre|lower %}📦
+      {% elif 'compte' in n.titre|lower or 'validé' in n.titre|lower %}👤
+      {% else %}🔔
+      {% endif %}
+    </div>
+    <div class="flex-grow-1">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <strong>{{ n.titre }}</strong>
+        {% if not n.est_lue %}<span class="badge bg-primary">Non lu</span>{% endif %}
+      </div>
+      <div class="text-muted small mt-1">{{ n.message }}</div>
+      <div class="text-muted small mt-1"><i class="fa-regular fa-clock"></i> {{ n.date_envoi|date:"d/m/Y H:i" }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="cli-card p-4 text-center text-muted">Aucune notification pour le moment.</div>
+{% endif %}
+{% endblock %}

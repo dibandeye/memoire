@@ -1,0 +1,100 @@
+{% extends 'client/base_client.html' %}
+{% load livraison_extras %}
+{% block titre %}Nouvelle livraison{% endblock %}
+{% block contenu %}
+
+<div class="cv-header">
+  <h3 class="page-title mb-2">Que voulez-vous livrer ?</h3>
+  <p class="cv-subtitle">Choisissez le véhicule adapté</p>
+</div>
+
+<div class="cv-grid">
+  <a href="{% url 'livraison:creer_livraison' 'moto' %}" class="cv-card">
+    <span class="cv-check">✅</span>
+    <div class="cv-img" style="background-image:url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400');"></div>
+    <div class="cv-body">
+      <div class="cv-title">🏍️ Moto</div>
+      <div class="cv-desc">Colis léger, documents</div>
+      <div class="cv-tag">Rapide &amp; économique</div>
+      <div class="cv-price">{{ tarifs.moto|fcfa }}</div>
+      <span class="cv-btn">Choisir <i class="fa-solid fa-arrow-right"></i></span>
+    </div>
+  </a>
+
+  <a href="{% url 'livraison:creer_livraison' 'voiture' %}" class="cv-card">
+    <span class="cv-check">✅</span>
+    <div class="cv-img" style="background-image:url('https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=400');"></div>
+    <div class="cv-body">
+      <div class="cv-title">🚗 Voiture</div>
+      <div class="cv-desc">Colis moyens, marchandises</div>
+      <div class="cv-tag">Confortable &amp; sécurisé</div>
+      <div class="cv-price">{{ tarifs.voiture|fcfa }}</div>
+      <span class="cv-btn">Choisir <i class="fa-solid fa-arrow-right"></i></span>
+    </div>
+  </a>
+
+  <a href="{% url 'livraison:creer_livraison' 'camion' %}" class="cv-card">
+    <span class="cv-check">✅</span>
+    <div class="cv-img" style="background-image:url('https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=400');"></div>
+    <div class="cv-body">
+      <div class="cv-title">🚚 Camion</div>
+      <div class="cv-desc">Déménagement, gros volumes</div>
+      <div class="cv-tag">Grande capacité</div>
+      <div class="cv-price">{{ tarifs.camion|fcfa }}</div>
+      <span class="cv-btn">Choisir <i class="fa-solid fa-arrow-right"></i></span>
+    </div>
+  </a>
+</div>
+
+<style>
+  .cv-header { text-align: center; margin: .5rem 0 2.5rem; }
+  .cv-subtitle { color: #6b7280; font-size: 1rem; margin: 0; }
+
+  .cv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.75rem; max-width: 1050px; margin: 0 auto; }
+  .cv-card {
+    position: relative; display: flex; flex-direction: column; background: #fff; border-radius: 18px;
+    border: 2px solid #e7e9f2; overflow: hidden; text-decoration: none; color: inherit;
+    transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+  .cv-card:hover { border-color: var(--primary); box-shadow: 0 14px 32px rgba(26,35,126,.15); transform: scale(1.03); color: inherit; }
+  .cv-card.selected { border: 4px solid var(--primary); box-shadow: 0 14px 32px rgba(26,35,126,.25); transform: scale(1.03); }
+  .cv-card:active { transform: scale(.98); }
+
+  .cv-img { height: 200px; background-size: cover; background-position: center; background-color: #eef0f7; }
+  .cv-body { padding: 1.4rem 1.5rem 1.6rem; display: flex; flex-direction: column; gap: .35rem; flex: 1; }
+  .cv-title { font-size: 1.25rem; font-weight: 800; color: #1f2937; }
+  .cv-desc { color: #4b5563; font-size: .92rem; }
+  .cv-tag { color: #6b7280; font-size: .82rem; }
+  .cv-price { font-size: 1.35rem; font-weight: 800; color: var(--primary); margin: .6rem 0 1rem; }
+  .cv-btn {
+    margin-top: auto; align-self: flex-start; display: inline-flex; align-items: center; gap: .5rem;
+    background: var(--primary); color: #fff; font-weight: 700; font-size: .9rem; padding: .65rem 1.3rem; border-radius: 10px;
+    transition: gap .2s ease;
+  }
+  .cv-card:hover .cv-btn { gap: .8rem; }
+
+  .cv-check {
+    position: absolute; top: 12px; right: 12px; z-index: 1; font-size: 1.5rem; line-height: 1;
+    background: #fff; border-radius: 50%; padding: .3rem; box-shadow: 0 4px 12px rgba(0,0,0,.15);
+    opacity: 0; transform: scale(.4); transition: opacity .25s ease, transform .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .cv-card.selected .cv-check { opacity: 1; transform: scale(1); }
+
+  @media (max-width: 900px) {
+    .cv-grid { grid-template-columns: 1fr; max-width: 460px; }
+  }
+</style>
+
+<script>
+  // Marque la carte comme sélectionnée, laisse l'animation se jouer, puis ouvre le formulaire.
+  document.querySelectorAll('.cv-card').forEach(function (card) {
+    card.addEventListener('click', function (e) {
+      if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+      e.preventDefault();
+      document.querySelectorAll('.cv-card').forEach(function (c) { c.classList.remove('selected'); });
+      card.classList.add('selected');
+      setTimeout(function () { window.location.href = card.href; }, 350);
+    });
+  });
+</script>
+{% endblock %}

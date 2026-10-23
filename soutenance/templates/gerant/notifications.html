@@ -1,0 +1,35 @@
+{% extends 'gerant/base_gerant.html' %}
+{% block titre %}Notifications{% endblock %}
+{% block contenu %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <h3 class="page-title mb-0">Notifications</h3>
+  {% if nb_notifs_non_lues %}
+  <form method="post" action="{% url 'livraison:notifications_gerant' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-check-double"></i> Marquer tout comme lu</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if notifications %}
+<div class="ger-card">
+  {% for n in notifications %}
+  <div class="d-flex align-items-start gap-3 p-3 {% if not forloop.last %}border-bottom{% endif %}">
+    <div class="fs-4">
+      {% if 'affect' in n.titre|lower %}📍{% elif 'bienvenue' in n.titre|lower %}🎉{% elif 'colis' in n.titre|lower %}📦{% else %}🔔{% endif %}
+    </div>
+    <div class="flex-grow-1">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <strong>{{ n.titre }}</strong>
+        {% if not n.est_lue %}<span class="badge bg-primary">Non lu</span>{% endif %}
+      </div>
+      <div class="text-muted small mt-1">{{ n.message }}</div>
+      <div class="text-muted small mt-1"><i class="fa-regular fa-clock"></i> {{ n.date_envoi|date:"d/m/Y H:i" }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="text-muted">Aucune notification pour le moment.</p>
+{% endif %}
+{% endblock %}

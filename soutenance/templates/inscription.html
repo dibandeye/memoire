@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inscription — LivraisonExpress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1a237e;
+    --secondary: #00b0ff;
+    --success: #00c853;
+    --warning: #ff6d00;
+    --danger: #d50000;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+  }
+
+  .auth-screen {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    padding: 2.5rem 1rem;
+    background: url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat fixed;
+  }
+  .auth-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(120deg, rgba(26,35,126,.86) 0%, rgba(26,35,126,.72) 55%, rgba(13,22,87,.65) 100%);
+  }
+
+  .signup-card {
+    position: relative; z-index: 2;
+    width: 100%; max-width: 640px;
+    background: #fff; border-radius: 24px;
+    box-shadow: 0 25px 60px rgba(0,0,0,.35);
+    padding: 2.4rem 2.4rem 2rem;
+    opacity: 0; transform: translateY(18px);
+    animation: fadeInUp .6s ease forwards;
+  }
+
+  .signup-logo {
+    display: flex; align-items: center; justify-content: center; gap: .6rem;
+    font-weight: 800; color: var(--primary); font-size: 1.15rem; margin-bottom: .3rem;
+  }
+  .signup-logo .logo-badge {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.15rem;
+  }
+  .signup-title { text-align: center; font-weight: 700; font-size: 1.4rem; color: #1f2330; margin: .3rem 0 1.6rem; }
+
+  /* ── Progress / stepper ─────────────────────────────────── */
+  .stepper-track { display: flex; align-items: center; margin-bottom: 2rem; }
+  .step-node { display: flex; flex-direction: column; align-items: center; gap: .4rem; flex: 0 0 auto; width: 92px; }
+  .step-circle {
+    width: 38px; height: 38px; border-radius: 50%; background: #eef0f7; color: #9aa0b4;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .9rem;
+    border: 2px solid #eef0f7; transition: all .35s ease;
+  }
+  .step-label { font-size: .74rem; font-weight: 600; color: #9aa0b4; text-align: center; transition: color .35s ease; }
+  .step-line { flex: 1 1 auto; height: 3px; background: #eef0f7; margin: 0 -6px 20px; border-radius: 2px; overflow: hidden; position: relative; }
+  .step-line-fill { position: absolute; inset: 0; width: 0%; background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width .4s ease; }
+
+  .step-node.done .step-circle { background: linear-gradient(135deg, var(--primary), var(--secondary)); border-color: transparent; color: #fff; }
+  .step-node.done .step-label { color: var(--primary); }
+  .step-node.active .step-circle { border-color: var(--secondary); color: var(--primary); background: #fff; box-shadow: 0 0 0 5px rgba(0,176,255,.15); }
+  .step-node.active .step-label { color: var(--primary); }
+
+  /* ── Form steps ─────────────────────────────────────────── */
+  .step-panel { display: none; animation: fadeInUp .4s ease; }
+  .step-panel.visible { display: block; }
+
+  .form-group { margin-bottom: 1.1rem; }
+  .form-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .form-row .form-group { flex: 1 1 200px; }
+  label.field-label { display: block; font-size: .82rem; font-weight: 600; color: #3f4254; margin-bottom: .4rem; }
+  .form-control-auth, select.form-control-auth {
+    width: 100%; padding: .75rem 1rem; border-radius: 12px;
+    border: 1.5px solid #e7e9f2; font-family: inherit; font-size: .93rem;
+    transition: border-color .2s ease, box-shadow .2s ease; background: #fafbff;
+  }
+  .form-control-auth:focus {
+    outline: none; border-color: var(--secondary);
+    box-shadow: 0 0 0 4px rgba(0,176,255,.15); background: #fff;
+  }
+  .field-error { color: var(--danger); font-size: .78rem; margin-top: .3rem; }
+  .field-hint { color: #8a8fa3; font-size: .78rem; margin-top: .3rem; }
+
+  /* Role selection cards */
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: .5rem; }
+  .role-card {
+    position: relative; border: 2px solid #e7e9f2; border-radius: 16px; padding: 1.4rem 1rem;
+    text-align: center; cursor: pointer; transition: all .25s ease; background: #fafbff;
+  }
+  .role-card input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .role-card .role-icon { font-size: 2.2rem; margin-bottom: .5rem; display: block; }
+  .role-card .role-title { font-weight: 700; color: #374151; font-size: .98rem; }
+  .role-card .role-desc { font-size: .78rem; color: #8a8fa3; margin-top: .2rem; }
+  .role-card:hover { border-color: var(--secondary); transform: translateY(-3px); }
+  .role-card:has(input:checked) {
+    border-color: var(--primary); background: linear-gradient(135deg, rgba(26,35,126,.06), rgba(0,176,255,.06));
+    box-shadow: 0 8px 20px rgba(26,35,126,.12);
+  }
+  .role-card:has(input:checked) .role-title { color: var(--primary); }
+
+  .form-check-auth { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
+  .form-check-auth input { width: 18px; height: 18px; accent-color: var(--primary); }
+  .form-check-auth label { font-size: .88rem; color: #3f4254; font-weight: 500; }
+
+  .step-actions { display: flex; justify-content: space-between; gap: 1rem; margin-top: 1.6rem; }
+  .btn-step {
+    border: none; border-radius: 12px; padding: .85rem 1.6rem; font-weight: 700; font-size: .92rem;
+    cursor: pointer; transition: transform .15s ease, box-shadow .25s ease, background-position .5s ease;
+  }
+  .btn-step-next, .btn-step-submit {
+    color: #fff; margin-left: auto;
+    background: linear-gradient(135deg, var(--primary), var(--secondary)); background-size: 200% auto;
+    box-shadow: 0 10px 24px rgba(26,35,126,.3);
+  }
+  .btn-step-next:hover, .btn-step-submit:hover { background-position: right center; transform: translateY(-2px); box-shadow: 0 14px 30px rgba(0,176,255,.4); }
+  .btn-step-prev { background: #f1f2f8; color: #4b5563; }
+  .btn-step-prev:hover { background: #e5e7f0; }
+
+  .auth-footer-link { text-align: center; margin-top: 1.4rem; font-size: .88rem; color: #6b7280; }
+  .auth-footer-link a { color: var(--secondary); font-weight: 700; text-decoration: none; }
+  .auth-footer-link a:hover { text-decoration: underline; }
+
+  .auth-alert {
+    padding: .7rem .9rem; border-radius: 10px; font-size: .84rem; margin-bottom: 1rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .auth-alert.error   { background: #fdeaea; color: var(--danger); }
+  .auth-alert.warning { background: #fff4e5; color: var(--warning); }
+  .auth-alert.success { background: #e3faec; color: var(--success); }
+  .auth-alert.info    { background: #e3f2fd; color: #0d47a1; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 560px) {
+    .signup-card { padding: 1.8rem 1.3rem 1.6rem; }
+    .step-label { display: none; }
+    .step-node { width: auto; }
+    .role-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="auth-screen">
+  <div class="auth-overlay"></div>
+
+  <div class="signup-card">
+    <div class="signup-logo"><span class="logo-badge"><i class="fa-solid fa-truck-fast"></i></span> LivraisonExpress</div>
+    <h2 class="signup-title">Créer un compte</h2>
+
+    {% for message in messages %}
+      <div class="auth-alert {{ message.tags }}">
+        <i class="fa-solid {% if message.tags == 'error' %}fa-circle-exclamation{% elif message.tags == 'success' %}fa-circle-check{% elif message.tags == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+        {{ message }}
+      </div>
+    {% endfor %}
+
+    <!-- Stepper header -->
+    <div class="stepper-track" id="stepperTrack">
+      <div class="step-node" data-step="1">
+        <div class="step-circle">1</div>
+        <div class="step-label">Informations</div>
+      </div>
+      <div class="step-line"><div class="step-line-fill" id="fill1"></div></div>
+      <div class="step-node" data-step="2">
+        <div class="step-circle">2</div>
+        <div class="step-label">Type de compte</div>
+      </div>
+      <div class="step-line"><div class="step-line-fill" id="fill2"></div></div>
+      <div class="step-node" data-step="3">
+        <div class="step-circle">3</div>
+        <div class="step-label">Détails</div>
+      </div>
+    </div>
+
+    <form method="post" id="formInscription" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="role" id="id_role_hidden" value="{{ donnees.role|default:'client' }}">
+
+      <!-- ── ÉTAPE 1 : Informations personnelles ─────────────── -->
+      <div class="step-panel" data-panel="1">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="field-label">Nom</label>
+            <input type="text" name="nom" class="form-control-auth" value="{{ donnees.nom|default:'' }}" required>
+          </div>
+          <div class="form-group">
+            <label class="field-label">Prénom</label>
+            <input type="text" name="prenom" class="form-control-auth" value="{{ donnees.prenom|default:'' }}" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="field-label">Email</label>
+          <input type="email" name="email" class="form-control-auth" value="{{ donnees.email|default:'' }}" required>
+        </div>
+        <div class="form-group">
+          <label class="field-label">Téléphone</label>
+          <input type="text" name="telephone" class="form-control-auth" value="{{ donnees.telephone|default:'' }}">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="field-label">Mot de passe</label>
+            <input type="password" name="mot_de_passe" class="form-control-auth" required>
+          </div>
+          <div class="form-group">
+            <label class="field-label">Confirmer le mot de passe</label>
+            <input type="password" name="mot_de_passe_confirm" class="form-control-auth" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ÉTAPE 2 : Type de compte ─────────────────────────── -->
+      <div class="step-panel" data-panel="2">
+        <div class="role-grid">
+          <label class="role-card">
+            <input type="radio" name="role_choice" value="client" {% if donnees.role != 'livreur' %}checked{% endif %}>
+            <span class="role-icon">🧑‍💼</span>
+            <div class="role-title">Client</div>
+            <div class="role-desc">Je veux faire livrer des colis</div>
+          </label>
+          <label class="role-card">
+            <input type="radio" name="role_choice" value="livreur" {% if donnees.role == 'livreur' %}checked{% endif %}>
+            <span class="role-icon">🏍️</span>
+            <div class="role-title">Livreur</div>
+            <div class="role-desc">Je veux effectuer des livraisons</div>
+          </label>
+        </div>
+      </div>
+
+      <!-- ── ÉTAPE 3 : Informations spécifiques ───────────────── -->
+      <div class="step-panel" data-panel="3">
+        <div id="champs_client">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="field-label">Adresse</label>
+              <input type="text" name="adresse" class="form-control-auth" value="{{ donnees.adresse|default:'' }}">
+            </div>
+            <div class="form-group">
+              <label class="field-label">Ville</label>
+              <input type="text" name="ville" class="form-control-auth" value="{{ donnees.ville|default:'' }}">
+            </div>
+          </div>
+        </div>
+
+        <div id="champs_livreur" style="display:none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="field-label">Numéro de permis</label>
+              <input type="text" name="num_permis" class="form-control-auth" value="{{ donnees.num_permis|default:'' }}">
+            </div>
+            <div class="form-group">
+              <label class="field-label">Type de permis</label>
+              <select name="type_permis" id="id_type_permis" class="form-control-auth" onchange="permisModifie()">
+                <option value="moto" {% if donnees.type_permis == 'moto' %}selected{% endif %}>🏍️ Permis moto</option>
+                <option value="voiture" {% if donnees.type_permis == 'voiture' %}selected{% endif %}>🚗 Permis voiture</option>
+                <option value="les_deux" {% if donnees.type_permis == 'les_deux' %}selected{% endif %}>🏍️🚗 Permis moto et voiture</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-check-auth">
+            <input type="checkbox" name="possede_vehicule_perso" id="id_possede_vehicule_perso"
+                   onchange="basculerVehiculePerso()"
+                   {% if donnees.possede_vehicule_perso %}checked{% endif %}>
+            <label for="id_possede_vehicule_perso">Je possède mon propre véhicule</label>
+          </div>
+
+          <div id="champs_vehicule_perso" style="display:none;">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="field-label">Type de véhicule personnel</label>
+                <select name="type_vehicule_perso" id="id_type_vehicule_perso" class="form-control-auth" onchange="typeVehiculePersoModifie()">
+                  <option value="moto" {% if donnees.type_vehicule_perso == 'moto' %}selected{% endif %}>🏍️ Moto</option>
+                  <option value="voiture" {% if donnees.type_vehicule_perso == 'voiture' %}selected{% endif %}>🚗 Voiture</option>
+                </select>
+                {% if erreurs_champs.type_vehicule_perso %}<div class="field-error">{{ erreurs_champs.type_vehicule_perso }}</div>{% endif %}
+              </div>
+              <div class="form-group">
+                <label class="field-label">Numéro d'immatriculation</label>
+                <input type="text" name="immatriculation_perso" class="form-control-auth"
+                       placeholder="ex: DK-1234-AB" value="{{ donnees.immatriculation_perso|default:'' }}">
+                {% if erreurs_champs.immatriculation_perso %}<div class="field-error">{{ erreurs_champs.immatriculation_perso }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="field-label">Capacité maximale (en kg)</label>
+              <input type="number" step="0.1" min="0" name="capacite_charge_perso" id="id_capacite_charge_perso"
+                     class="form-control-auth" placeholder="ex: 30 pour moto, 500 pour voiture"
+                     value="{{ donnees.capacite_charge_perso|default:'' }}">
+              <div id="aide_capacite" class="field-hint"></div>
+              {% if erreurs_champs.capacite_charge_perso %}<div class="field-error">{{ erreurs_champs.capacite_charge_perso }}</div>{% endif %}
+            </div>
+          </div>
+          <p id="texte_sans_vehicule_perso" class="field-hint">
+            Sans véhicule personnel, vous dépendrez des véhicules de l'entreprise (affectés par un administrateur).
+          </p>
+          <p class="field-hint">Votre compte livreur devra être validé par un administrateur avant votre première connexion.</p>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button type="button" class="btn-step btn-step-prev" id="btnPrev" style="visibility:hidden;">
+          <i class="fa-solid fa-arrow-left"></i> Précédent
+        </button>
+        <button type="button" class="btn-step btn-step-next" id="btnNext">
+          Suivant <i class="fa-solid fa-arrow-right"></i>
+        </button>
+        <button type="submit" class="btn-step btn-step-submit" id="btnSubmit" style="display:none;">
+          <i class="fa-solid fa-check"></i> S'inscrire
+        </button>
+      </div>
+    </form>
+
+    <p class="auth-footer-link">
+      Déjà un compte ? <a href="{% url 'livraison:connexion' %}">Connectez-vous</a>
+    </p>
+  </div>
+</div>
+
+<script>
+const TOTAL_STEPS = 3;
+let currentStep = {% if donnees %}3{% else %}1{% endif %};
+
+function majStepperUI() {
+  document.querySelectorAll('.step-node').forEach(function (node) {
+    const n = parseInt(node.dataset.step, 10);
+    node.classList.toggle('done', n < currentStep);
+    node.classList.toggle('active', n === currentStep);
+  });
+  document.getElementById('fill1').style.width = currentStep > 1 ? '100%' : '0%';
+  document.getElementById('fill2').style.width = currentStep > 2 ? '100%' : '0%';
+
+  document.querySelectorAll('.step-panel').forEach(function (panel) {
+    panel.classList.toggle('visible', parseInt(panel.dataset.panel, 10) === currentStep);
+  });
+
+  document.getElementById('btnPrev').style.visibility = currentStep === 1 ? 'hidden' : 'visible';
+  document.getElementById('btnNext').style.display = currentStep === TOTAL_STEPS ? 'none' : 'inline-flex';
+  document.getElementById('btnSubmit').style.display = currentStep === TOTAL_STEPS ? 'inline-flex' : 'none';
+}
+
+function panelValide(n) {
+  const panel = document.querySelector('.step-panel[data-panel="' + n + '"]');
+  const champs = panel.querySelectorAll('input, select, textarea');
+  for (const champ of champs) {
+    if (champ.offsetParent === null) continue; // champ caché : ignoré
+    if (!champ.checkValidity()) { champ.reportValidity(); return false; }
+  }
+  return true;
+}
+
+document.getElementById('btnNext').addEventListener('click', function () {
+  if (!panelValide(currentStep)) return;
+  if (currentStep < TOTAL_STEPS) { currentStep++; majStepperUI(); }
+});
+document.getElementById('btnPrev').addEventListener('click', function () {
+  if (currentStep > 1) { currentStep--; majStepperUI(); }
+});
+
+function basculerChamps() {
+  const role = document.querySelector('input[name="role_choice"]:checked').value;
+  document.getElementById('id_role_hidden').value = role;
+  document.getElementById('champs_client').style.display = role === 'client' ? 'block' : 'none';
+  document.getElementById('champs_livreur').style.display = role === 'livreur' ? 'block' : 'none';
+}
+document.querySelectorAll('input[name="role_choice"]').forEach(function (r) {
+  r.addEventListener('change', basculerChamps);
+});
+
+function basculerVehiculePerso() {
+  const possede = document.getElementById('id_possede_vehicule_perso').checked;
+  document.getElementById('champs_vehicule_perso').style.display = possede ? 'block' : 'none';
+  document.getElementById('texte_sans_vehicule_perso').style.display = possede ? 'none' : 'block';
+  if (possede) { appliquerCompatibilitePermis(false); }
+}
+
+function appliquerCompatibilitePermis(reinitialiser) {
+  const permis = document.getElementById('id_type_permis').value;
+  const selectType = document.getElementById('id_type_vehicule_perso');
+  const optionMoto = selectType.querySelector('option[value="moto"]');
+  const optionVoiture = selectType.querySelector('option[value="voiture"]');
+
+  optionMoto.disabled = false;
+  optionVoiture.disabled = false;
+
+  if (permis === 'moto') {
+    optionVoiture.disabled = true;
+    selectType.value = 'moto';
+  } else if (permis === 'voiture') {
+    optionMoto.disabled = true;
+    selectType.value = 'voiture';
+  } else if (selectType.value !== 'moto' && selectType.value !== 'voiture') {
+    selectType.value = 'moto';
+  }
+
+  if (reinitialiser) { document.getElementById('id_capacite_charge_perso').value = ''; }
+  typeVehiculePersoModifie();
+}
+
+function permisModifie() { appliquerCompatibilitePermis(true); }
+
+function typeVehiculePersoModifie() {
+  const type = document.getElementById('id_type_vehicule_perso').value;
+  const aide = document.getElementById('aide_capacite');
+  const champCapacite = document.getElementById('id_capacite_charge_perso');
+  if (type === 'voiture') {
+    aide.textContent = 'En général entre 300 et 1000 kg pour une voiture';
+    champCapacite.placeholder = 'ex: 500';
+  } else {
+    aide.textContent = 'En général entre 20 et 50 kg pour une moto';
+    champCapacite.placeholder = 'ex: 30';
+  }
+}
+
+basculerChamps();
+basculerVehiculePerso();
+appliquerCompatibilitePermis(false);
+majStepperUI();
+</script>
+</body>
+</html>

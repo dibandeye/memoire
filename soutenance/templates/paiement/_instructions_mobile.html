@@ -1,0 +1,20 @@
+{% load livraison_extras %}
+{% if livraison.paiement_mobile and not livraison.est_payee and livraison.statut != 'annulee' %}
+{% compte_paiement livraison.mode_paiement as compte %}
+<div class="pay-instructions {% if livraison.mode_paiement == 'wave' %}pay-instructions-wave{% else %}pay-instructions-om{% endif %}">
+  <div class="pay-instructions-titre"><i class="fa-solid fa-mobile-screen-button"></i> Instructions de paiement {{ livraison.get_mode_paiement_display }}</div>
+  <div>Envoyez <strong>{{ livraison.montant|fcfa }}</strong> au :</div>
+  <div class="pay-instructions-numero">📞 {{ compte.numero }}</div>
+  <div>Nom : <strong>{{ compte.nom }}</strong></div>
+  <div>Référence : <strong>{{ livraison.reference_attendue }}</strong></div>
+</div>
+<style>
+  .pay-instructions { border-radius: 12px; padding: .9rem 1.1rem; margin-top: .8rem; font-size: .88rem; color: #374151; border: 1.5px solid; }
+  .pay-instructions-wave { background: #e8f1fe; border-color: #b9d4fb; }
+  .pay-instructions-om   { background: #fff0e6; border-color: #ffc9a3; }
+  .pay-instructions-titre { font-weight: 700; margin-bottom: .35rem; }
+  .pay-instructions-wave .pay-instructions-titre { color: #1877F2; }
+  .pay-instructions-om .pay-instructions-titre   { color: #d45400; }
+  .pay-instructions-numero { font-size: 1.1rem; font-weight: 800; margin: .15rem 0; color: #1f2937; }
+</style>
+{% endif %}

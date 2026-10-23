@@ -1,0 +1,168 @@
+{% extends 'client/base_client.html' %}
+{% load livraison_extras %}
+{% block titre %}Tableau de bord{% endblock %}
+{% block contenu %}
+
+<!-- ── BANNIÈRE DE BIENVENUE ─────────────────────────────────────── -->
+<div class="welcome-banner fade-in-up mb-4">
+  <div class="welcome-overlay"></div>
+  <div class="welcome-content">
+    <h2 class="mb-1">Bonjour, {{ user.prenom }} ! 👋</h2>
+    <p class="mb-3">Que souhaitez-vous livrer aujourd'hui ?</p>
+    <a href="{% url 'livraison:choisir_vehicule' %}" class="btn btn-welcome">
+      <i class="fa-solid fa-plus"></i> Nouvelle livraison
+    </a>
+  </div>
+</div>
+
+<!-- ── STATISTIQUES ─────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-total fade-in-up" style="animation-delay:.05s">
+      <div class="stat-icon"><i class="fa-solid fa-box"></i></div>
+      <div class="stat-value">{{ stats.total }}</div>
+      <div class="stat-label">Total livraisons</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-attente fade-in-up" style="animation-delay:.1s">
+      <div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+      <div class="stat-value">{{ stats.en_attente }}</div>
+      <div class="stat-label">En attente</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-cours fade-in-up" style="animation-delay:.15s">
+      <div class="stat-icon"><i class="fa-solid fa-arrows-rotate"></i></div>
+      <div class="stat-value">{{ stats.en_cours }}</div>
+      <div class="stat-label">En cours</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-livree fade-in-up" style="animation-delay:.2s">
+      <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+      <div class="stat-value">{{ stats.livrees }}</div>
+      <div class="stat-label">Livrées</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TYPES DE LIVRAISON DISPONIBLES ───────────────────────────── -->
+<h5 class="page-title mb-3">Types de livraison disponibles</h5>
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <a href="{% url 'livraison:creer_livraison' 'moto' %}" class="service-card service-colis fade-in-up">
+      <div class="service-icon">🏍️</div>
+      <div class="service-title">Moto</div>
+      <div class="service-desc">Colis léger, documents</div>
+      <div class="service-price">À partir de 2 000 FCFA</div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'livraison:creer_livraison' 'voiture' %}" class="service-card service-marchandise fade-in-up" style="animation-delay:.05s">
+      <div class="service-icon">🚗</div>
+      <div class="service-title">Voiture</div>
+      <div class="service-desc">Colis moyens, marchandises</div>
+      <div class="service-price">À partir de 5 000 FCFA</div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'livraison:creer_livraison' 'camion' %}" class="service-card service-demenagement fade-in-up" style="animation-delay:.1s">
+      <div class="service-icon">🚚</div>
+      <div class="service-title">Camion</div>
+      <div class="service-desc">Déménagement, gros volumes</div>
+      <div class="service-price">À partir de 15 000 FCFA</div>
+    </a>
+  </div>
+</div>
+
+<!-- ── LIVRAISONS RÉCENTES ───────────────────────────────────────── -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="page-title mb-0">Mes livraisons récentes</h5>
+  <a href="{% url 'livraison:mes_livraisons' %}" class="pill-filtre">Voir tout <i class="fa-solid fa-arrow-right ms-1"></i></a>
+</div>
+
+{% if livraisons_recentes %}
+  {% for livraison in livraisons_recentes %}
+  <div class="livraison-card fade-in-up" style="animation-delay:{{ forloop.counter0|add:1 }}0ms">
+    <div class="livraison-card-top">
+      <div class="livraison-id">
+        <span class="livraison-hash">#{{ livraison.id }}</span>
+        <span class="livraison-type">{% if livraison.type_vehicule == 'moto' %}🏍️{% elif livraison.type_vehicule == 'voiture' %}🚗{% else %}🚚{% endif %} {{ livraison.get_type_vehicule_display }}</span>
+      </div>
+      <span class="badge-pill-statut {{ livraison.statut|classe_badge_statut }}">{{ livraison.get_statut_display }}</span>
+    </div>
+    <div class="livraison-route">
+      <i class="fa-solid fa-location-dot text-muted"></i> {{ livraison.ville_depart }}
+      <i class="fa-solid fa-arrow-right-long mx-2 text-muted"></i>
+      <i class="fa-solid fa-flag-checkered text-muted"></i> {{ livraison.ville_destination }}
+    </div>
+    {% if livraison.statut != 'annulee' %}
+    <div class="livraison-paiement mb-2 d-flex flex-wrap align-items-center gap-2 small">
+      {% include 'paiement/_badge_statut.html' %}
+      <span class="text-muted">·</span> {% include 'paiement/_mode.html' %}
+      {% if livraison.payeur == 'destinataire' %}<span class="text-muted">· payé par le destinataire</span>{% endif %}
+    </div>
+    {% endif %}
+    <div class="livraison-bottom">
+      <div class="livraison-meta">
+        {% if livraison.livreur %}
+          <span><i class="fa-solid fa-user text-muted"></i> {{ livraison.livreur }} <span class="text-warning">⭐{{ livraison.livreur.note_moyenne|floatformat:1 }}</span></span>
+        {% else %}
+          <span class="text-muted"><i class="fa-solid fa-user-slash"></i> Livreur non attribué</span>
+        {% endif %}
+        <span class="text-muted"><i class="fa-regular fa-calendar"></i> {{ livraison.date_demande|date:"d/m/Y" }}</span>
+      </div>
+      <div class="livraison-actions">
+        <a href="{% url 'livraison:detail_livraison' livraison.id %}" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-eye"></i> Voir</a>
+        {% if livraison.statut == 'en_attente' %}
+        <a href="{% url 'livraison:modifier_livraison' livraison.id %}" class="btn btn-sm btn-primaire-cli"><i class="fa-solid fa-pen"></i> Modifier</a>
+        {% endif %}
+      </div>
+    </div>
+    {% include 'paiement/_instructions_mobile.html' %}
+  </div>
+  {% endfor %}
+{% else %}
+<div class="cli-card p-4 text-center text-muted">
+  Vous n'avez aucune livraison pour le moment. <a href="{% url 'livraison:choisir_vehicule' %}">Créez votre première livraison</a>.
+</div>
+{% endif %}
+
+<style>
+  .welcome-banner {
+    position: relative; border-radius: 20px; overflow: hidden; padding: 2.4rem 2.2rem;
+    background: linear-gradient(120deg, rgba(26,35,126,.92), rgba(0,176,255,.75)),
+                url('https://images.unsplash.com/photo-1526367790999-0150786686a2?auto=format&fit=crop&w=1400&q=70') center/cover;
+    color: #fff; box-shadow: 0 10px 30px rgba(26,35,126,.25);
+  }
+  .welcome-content h2 { font-weight: 800; }
+  .welcome-content p { opacity: .95; }
+  .btn-welcome {
+    background: #fff; color: var(--primary); font-weight: 700; border: none; border-radius: 12px;
+    padding: .7rem 1.4rem; transition: transform .15s ease, box-shadow .2s ease;
+  }
+  .btn-welcome:hover { color: var(--primary); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.25); }
+
+  .service-card {
+    display: block; text-decoration: none; border-radius: 16px; padding: 1.6rem 1.3rem;
+    background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.06); text-align: center;
+    border: 2px solid transparent; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  .service-card:hover { transform: translateY(-5px); box-shadow: 0 12px 26px rgba(0,0,0,.12); border-color: var(--secondary); }
+  .service-icon { font-size: 2.4rem; margin-bottom: .5rem; }
+  .service-title { font-weight: 700; color: #1f2330; font-size: 1.05rem; }
+  .service-desc { color: #8a8fa3; font-size: .85rem; margin: .2rem 0 .5rem; }
+  .service-price { font-weight: 700; font-size: .82rem; color: var(--primary); }
+
+  .livraison-card { background: #fff; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.06); padding: 1.2rem 1.4rem; margin-bottom: .9rem; transition: box-shadow .2s ease; }
+  .livraison-card:hover { box-shadow: 0 8px 20px rgba(0,0,0,.1); }
+  .livraison-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; flex-wrap: wrap; gap: .5rem; }
+  .livraison-hash { font-weight: 800; color: var(--primary); margin-right: .6rem; }
+  .livraison-type { color: #4b5563; font-weight: 600; font-size: .92rem; }
+  .livraison-route { color: #374151; font-size: .9rem; margin-bottom: .7rem; }
+  .livraison-bottom { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .6rem; }
+  .livraison-meta { display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: .84rem; }
+  .livraison-actions { display: flex; gap: .5rem; }
+</style>
+{% endblock %}

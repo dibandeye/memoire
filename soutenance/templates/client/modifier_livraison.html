@@ -1,0 +1,83 @@
+{% extends 'client/base_client.html' %}
+{% block titre %}Modifier la livraison #{{ livraison.id }}{% endblock %}
+{% block contenu %}
+
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{% url 'livraison:mes_livraisons' %}" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-arrow-left"></i></a>
+  <h3 class="page-title mb-0">Modifier la livraison #{{ livraison.id }}</h3>
+</div>
+
+<div class="cli-card p-4 p-md-5" style="max-width:760px;">
+  <div class="alert alert-info d-flex align-items-center gap-2 mb-4" style="border-radius:12px;">
+    <i class="fa-solid fa-circle-info"></i>
+    <span>Véhicule : <strong>{{ livraison.get_type_vehicule_display }}</strong> — non modifiable après la création.</span>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="address-block">
+      <div class="address-icon depart"><i class="fa-solid fa-location-dot"></i></div>
+      <div class="flex-grow-1">
+        <label class="field-label">Adresse de départ</label>
+        <div class="row g-2">
+          <div class="col-md-7"><input type="text" name="adresse_depart" class="form-control-modern" value="{{ livraison.adresse_depart }}" required></div>
+          <div class="col-md-5"><input type="text" name="ville_depart" class="form-control-modern" value="{{ livraison.ville_depart }}" required></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="address-block">
+      <div class="address-icon destination"><i class="fa-solid fa-flag-checkered"></i></div>
+      <div class="flex-grow-1">
+        <label class="field-label">Adresse de destination</label>
+        <div class="row g-2">
+          <div class="col-md-7"><input type="text" name="adresse_destination" class="form-control-modern" value="{{ livraison.adresse_destination }}" required></div>
+          <div class="col-md-5"><input type="text" name="ville_destination" class="form-control-modern" value="{{ livraison.ville_destination }}" required></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="field-label">Quand ?</label>
+      <select name="livraison_immediate" class="form-control-modern mb-2" id="choixQuand">
+        <option value="true" {% if livraison.livraison_immediate %}selected{% endif %}>🟢 Maintenant — dès que possible</option>
+        <option value="false" {% if not livraison.livraison_immediate %}selected{% endif %}>📅 Programmer</option>
+      </select>
+      <input type="datetime-local" name="date_programmee" id="dateProgrammee" class="form-control-modern" value="{{ date_programmee_input }}" {% if livraison.livraison_immediate %}hidden{% endif %}>
+    </div>
+
+    <div class="mb-3">
+      <label class="field-label">Description du contenu</label>
+      <textarea name="description_contenu" class="form-control-modern" rows="2">{{ livraison.description_contenu|default_if_none:"" }}</textarea>
+    </div>
+
+    {% if livraison.type_livraison != 'point_relais' %}
+    <div class="mb-4">
+      <label class="field-label">Instructions spéciales</label>
+      <textarea name="instructions_speciales" class="form-control-modern" rows="2">{{ livraison.instructions_speciales|default_if_none:"" }}</textarea>
+    </div>
+    {% endif %}
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primaire-cli"><i class="fa-solid fa-floppy-disk"></i> Enregistrer les modifications</button>
+      <a href="{% url 'livraison:dashboard_client' %}" class="btn btn-outline-secondary">Annuler</a>
+    </div>
+  </form>
+</div>
+
+<style>
+  .address-block { display: flex; gap: 1rem; margin-bottom: 1.3rem; }
+  .address-icon { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.1rem; color: #fff; }
+  .address-icon.depart { background: var(--secondary); }
+  .address-icon.destination { background: var(--success); }
+  .field-label { display: block; font-size: .82rem; font-weight: 600; color: #3f4254; margin-bottom: .4rem; }
+  .form-control-modern { width: 100%; padding: .7rem .9rem; border-radius: 10px; border: 1.5px solid #e7e9f2; font-family: inherit; font-size: .9rem; background: #fafbff; transition: border-color .2s ease; }
+  .form-control-modern:focus { outline: none; border-color: var(--secondary); background: #fff; }
+</style>
+<script>
+  document.getElementById('choixQuand').addEventListener('change', function () {
+    document.getElementById('dateProgrammee').hidden = this.value !== 'false';
+  });
+</script>
+{% endblock %}

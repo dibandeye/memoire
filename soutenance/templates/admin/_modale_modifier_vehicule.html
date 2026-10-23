@@ -1,0 +1,66 @@
+<!-- Modale modification : {{ vehicule.immatriculation }} -->
+<div class="modal fade" id="modalModifier{{ vehicule.pk }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'livraison:modifier_vehicule' vehicule.pk %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header admin-card-header">
+          <h5 class="modal-title">Modifier le véhicule</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3 text-center">
+            <label for="photo_modifier{{ vehicule.pk }}" class="apercu-photo-label">
+              <img id="apercu_photo_modifier{{ vehicule.pk }}" class="apercu-photo {% if not vehicule.photo %}d-none{% endif %}"
+                   {% if vehicule.photo %}src="{{ vehicule.photo.url }}"{% endif %} alt="Aperçu">
+              <span id="apercu_photo_modifier{{ vehicule.pk }}_placeholder" class="apercu-photo-placeholder {% if vehicule.photo %}d-none{% endif %}">
+                <i class="fa-solid fa-camera fs-3 d-block mb-1"></i>
+                Cliquez pour ajouter une photo
+              </span>
+            </label>
+            <input type="file" id="photo_modifier{{ vehicule.pk }}" name="photo" accept="image/jpeg,image/png,image/jpg" class="d-none"
+                   onchange="previsualiserPhoto(this, 'apercu_photo_modifier{{ vehicule.pk }}', 'apercu_photo_modifier{{ vehicule.pk }}_placeholder')">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Immatriculation</label>
+            <input type="text" name="immatriculation" class="form-control" value="{{ vehicule.immatriculation }}" required>
+          </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Type</label>
+              <select name="type_vehicule" class="form-select">
+                <option value="moto" {% if vehicule.type_vehicule == 'moto' %}selected{% endif %}>Moto</option>
+                <option value="voiture" {% if vehicule.type_vehicule == 'voiture' %}selected{% endif %}>Voiture</option>
+              </select>
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label">Couleur</label>
+              <input type="text" name="couleur" class="form-control" list="liste_couleurs" value="{{ vehicule.couleur }}">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Marque</label>
+              <input type="text" name="marque" class="form-control" value="{{ vehicule.marque }}">
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label">Modèle</label>
+              <input type="text" name="modele" class="form-control" value="{{ vehicule.modele }}">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Capacité de charge (kg)</label>
+            <input type="number" step="0.1" name="capacite_charge" class="form-control" value="{{ vehicule.capacite_charge }}">
+          </div>
+          <div class="form-text">
+            Le statut (disponible / affecté / en maintenance) se change avec les boutons dédiés, pas depuis ce formulaire.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-admin">Enregistrer</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

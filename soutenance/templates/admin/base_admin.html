@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block titre_admin %}Tableau de bord{% endblock %} — LivraisonExpress</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1a237e;
+    --primary-dark: #0d1657;
+    --primary-light: #e8eaf6;
+    --sidebar-w: 264px;
+    --header-h: 64px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #f4f6fb;
+    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+    color: #212529;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────────────── */
+  .admin-header {
+    position: fixed; top: 0; left: 0; right: 0; height: var(--header-h);
+    background: #fff; border-bottom: 1px solid #e5e7eb;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1.5rem; z-index: 1040; box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  .admin-logo {
+    display: flex; align-items: center; gap: .6rem; text-decoration: none;
+    color: var(--primary); font-weight: 800; font-size: 1.2rem; letter-spacing: -.02em;
+  }
+  .admin-logo .logo-badge {
+    width: 38px; height: 38px; border-radius: .55rem; background: var(--primary);
+    color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.05rem;
+  }
+  .admin-header-right { display: flex; align-items: center; gap: 1.1rem; }
+  .btn-notif {
+    position: relative; border: none; background: #f4f6fb; color: #4b5563;
+    width: 40px; height: 40px; border-radius: 50%; font-size: 1.05rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-notif:hover { background: var(--primary-light); color: var(--primary); }
+  .notif-badge {
+    position: absolute; top: -2px; right: -2px; background: #dc3545; color: #fff;
+    border-radius: 50%; font-size: .62rem; min-width: 17px; height: 17px; line-height: 17px;
+    text-align: center; font-weight: 700; padding: 0 3px;
+  }
+  .admin-notif-menu { width: 320px; padding: 0; overflow: hidden; }
+  .admin-notif-menu .notif-head { padding: .75rem 1rem; background: var(--primary); color: #fff; font-weight: 600; font-size: .9rem; }
+  .admin-notif-menu .notif-item { padding: .6rem 1rem; border-bottom: 1px solid #f1f1f1; white-space: normal; }
+  .admin-notif-menu .notif-item small { color: #9ca3af; }
+  .admin-user { display: flex; align-items: center; gap: .5rem; font-weight: 600; color: #374151; font-size: .92rem; }
+  .admin-user i { font-size: 1.6rem; color: var(--primary); }
+  .btn-logout {
+    background: var(--primary); border: none; color: #fff; font-size: .85rem;
+    padding: .5rem 1rem; border-radius: .5rem; display: flex; align-items: center; gap: .45rem;
+  }
+  .btn-logout:hover { background: var(--primary-dark); color: #fff; }
+
+  /* ── SIDEBAR ────────────────────────────────────────────────── */
+  .admin-sidebar {
+    position: fixed; top: var(--header-h); left: 0; bottom: 0; width: var(--sidebar-w);
+    background: var(--primary); overflow-y: auto; z-index: 1030; padding: .75rem 0 1.5rem;
+  }
+  .admin-nav-link, .admin-nav-parent {
+    display: flex; align-items: center; gap: .7rem; color: rgba(255,255,255,.85);
+    padding: .7rem 1.4rem; text-decoration: none; font-size: .92rem; cursor: pointer;
+    border-left: 3px solid transparent; transition: background .15s ease;
+  }
+  .admin-nav-link i, .admin-nav-parent i { width: 18px; text-align: center; }
+  .admin-nav-link:hover, .admin-nav-parent:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .admin-nav-link.active, .admin-nav-parent.active { background: rgba(255,255,255,.14); color: #fff; border-left-color: #fff; font-weight: 600; }
+  .admin-nav-children { display: flex; flex-direction: column; padding: .15rem 0 .4rem 3rem; }
+  .admin-nav-children a {
+    color: rgba(255,255,255,.65); text-decoration: none; font-size: .84rem;
+    padding: .4rem 0 .4rem .7rem; border-left: 2px solid rgba(255,255,255,.15);
+  }
+  .admin-nav-children a:hover { color: #fff; }
+  .admin-nav-children a.active { color: #fff; font-weight: 600; border-left-color: #fff; }
+  .admin-nav-sep { border-top: 1px solid rgba(255,255,255,.12); margin: .6rem 1.4rem; }
+
+  /* ── MAIN ───────────────────────────────────────────────────── */
+  .admin-main { margin-left: var(--sidebar-w); margin-top: var(--header-h); padding: 1.75rem 2rem 3rem; min-height: calc(100vh - var(--header-h)); }
+  .page-title { font-weight: 700; color: #1f2330; margin-bottom: 1.5rem; }
+
+  .admin-card-header { background: var(--primary); color: #fff; font-weight: 600; }
+  .btn-admin { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .btn-admin:hover { background: var(--primary-dark); border-color: var(--primary-dark); color: #fff; }
+  .btn-outline-admin { color: var(--primary); border-color: var(--primary); }
+  .btn-outline-admin:hover { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  .table-hover-admin tbody tr { transition: background .12s ease; }
+  .table-hover-admin tbody tr:hover { background: var(--primary-light); }
+
+  .filter-tabs .btn { border-radius: 2rem; font-size: .85rem; }
+  .nav-tabs-admin .nav-link { color: #6b7280; font-weight: 600; border: none; border-bottom: 3px solid transparent; }
+  .nav-tabs-admin .nav-link.active { color: var(--primary); border-bottom-color: var(--primary); background: transparent; }
+
+  /* ── Véhicules : miniature + pastille couleur (partagé entre les pages) ── */
+  .vehicule-miniature { width: 48px; height: 48px; border-radius: .4rem; object-fit: cover; display: inline-flex; }
+  .vehicule-miniature-vide {
+    width: 48px; height: 48px; border-radius: .4rem; background: var(--primary-light);
+    align-items: center; justify-content: center; font-size: 1.4rem;
+  }
+  .couleur-pastille { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); vertical-align: -2px; background: #ced4da; }
+  .couleur-blanc  { background: #ffffff; }
+  .couleur-noir   { background: #1a1a1a; }
+  .couleur-gris   { background: #9ca3af; }
+  .couleur-rouge  { background: #dc3545; }
+  .couleur-bleu   { background: #0d6efd; }
+  .couleur-vert   { background: #198754; }
+  .couleur-jaune  { background: #ffc107; }
+  .couleur-orange { background: #fd7e14; }
+
+  /* ── Avatar à initiales (gérants) ── */
+  .avatar-initiales {
+    width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; font-weight: 700;
+    font-size: .85rem; flex-shrink: 0; text-transform: uppercase;
+  }
+  .avatar-initiales.avatar-lg { width: 88px; height: 88px; font-size: 2rem; }
+
+  @media (max-width: 900px) {
+    :root { --sidebar-w: 76px; }
+    .admin-nav-link span, .admin-nav-parent span, .admin-nav-children { display: none; }
+    .admin-logo span.logo-text { display: none; }
+    .admin-main { padding: 1.25rem; }
+  }
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<header class="admin-header">
+  <a class="admin-logo" href="{% url 'livraison:dashboard_admin' %}">
+    <span class="logo-badge"><i class="fa-solid fa-truck-fast"></i></span>
+    <span class="logo-text">LivraisonExpress</span>
+  </a>
+
+  <div class="admin-header-right">
+    {% with notifs=user.notifications.all %}
+    <div class="dropdown">
+      <button class="btn-notif" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fa-regular fa-bell"></i>
+        {% if notifs|length %}<span class="notif-badge">{{ notifs|length }}</span>{% endif %}
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end admin-notif-menu shadow">
+        <li class="notif-head">Notifications</li>
+        {% for n in notifs|slice:":5" %}
+        <li class="notif-item">
+          <div class="fw-semibold">{{ n.titre }}</div>
+          <div class="small text-muted">{{ n.message }}</div>
+          <small>{{ n.date_envoi|date:"d/m/Y H:i" }}</small>
+        </li>
+        {% empty %}
+        <li class="notif-item text-muted text-center py-3">Aucune notification</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endwith %}
+
+    <span class="admin-user"><i class="fa-solid fa-circle-user"></i> {{ user.prenom }} {{ user.nom }}</span>
+
+    <form method="post" action="{% url 'livraison:deconnexion' %}" class="m-0">
+      {% csrf_token %}
+      <button type="submit" class="btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Déconnexion</button>
+    </form>
+  </div>
+</header>
+
+<aside class="admin-sidebar">
+  <nav class="admin-nav">
+    <a class="admin-nav-link {% if section == 'dashboard' %}active{% endif %}" href="{% url 'livraison:dashboard_admin' %}">
+      <i class="fa-solid fa-gauge-high"></i> <span>Tableau de bord</span>
+    </a>
+
+    <div class="admin-nav-parent {% if section == 'livraisons' %}active{% endif %}"
+         onclick="window.location.href='{% url 'livraison:liste_livraisons_admin' %}'">
+      <i class="fa-solid fa-box"></i> <span>Livraisons</span>
+    </div>
+    <div class="admin-nav-children">
+      <a href="{% url 'livraison:liste_livraisons_admin' %}" class="{% if section == 'livraisons' and filtre == 'toutes' %}active{% endif %}">Toutes les livraisons</a>
+      <a href="{% url 'livraison:liste_livraisons_admin' %}?statut=en_attente" class="{% if section == 'livraisons' and filtre == 'en_attente' %}active{% endif %}">En attente</a>
+      <a href="{% url 'livraison:liste_livraisons_admin' %}?statut=en_cours" class="{% if section == 'livraisons' and filtre == 'en_cours' %}active{% endif %}">En cours</a>
+      <a href="{% url 'livraison:liste_livraisons_admin' %}?statut=historique" class="{% if section == 'livraisons' and filtre == 'historique' %}active{% endif %}">Historique</a>
+    </div>
+
+    <div class="admin-nav-parent {% if section == 'livreurs' %}active{% endif %}"
+         onclick="window.location.href='{% url 'livraison:liste_livreurs_admin' %}'">
+      <i class="fa-solid fa-id-card-clip"></i> <span>Livreurs</span>
+    </div>
+    <div class="admin-nav-children">
+      <a href="{% url 'livraison:liste_livreurs_admin' %}" class="{% if section == 'livreurs' and onglet == 'tous' %}active{% endif %}">Tous les livreurs</a>
+      <a href="{% url 'livraison:liste_livreurs_admin' %}?onglet=validation" class="{% if section == 'livreurs' and onglet == 'validation' %}active{% endif %}">En attente de validation</a>
+    </div>
+
+    <div class="admin-nav-parent {% if section == 'vehicules' %}active{% endif %}"
+         onclick="window.location.href='{% url 'livraison:liste_vehicules_admin' %}'">
+      <i class="fa-solid fa-car-side"></i> <span>Véhicules</span>
+    </div>
+    <div class="admin-nav-children">
+      <a href="{% url 'livraison:liste_vehicules_admin' %}" class="{% if section == 'vehicules' and onglet == 'tous' %}active{% endif %}">Tous les véhicules</a>
+      <a href="{% url 'livraison:liste_vehicules_admin' %}?onglet=parking" class="{% if section == 'vehicules' and onglet == 'parking' %}active{% endif %}">Affecter un véhicule</a>
+    </div>
+
+    <div class="admin-nav-parent {% if section == 'points_relais' %}active{% endif %}"
+         onclick="window.location.href='{% url 'livraison:liste_points_relais' %}'">
+      <i class="fa-solid fa-location-dot"></i> <span>Points relais</span>
+    </div>
+    <div class="admin-nav-children">
+      <a href="{% url 'livraison:liste_points_relais' %}" class="{% if section == 'points_relais' %}active{% endif %}">Tous les points relais</a>
+    </div>
+
+    <div class="admin-nav-parent {% if section == 'gerants' %}active{% endif %}"
+         onclick="window.location.href='{% url 'livraison:liste_gerants' %}'">
+      <i class="fa-solid fa-user-tie"></i> <span>Gérants</span>
+    </div>
+    <div class="admin-nav-children">
+      <a href="{% url 'livraison:liste_gerants' %}" class="{% if section == 'gerants' and sous_section == 'liste' %}active{% endif %}">Tous les gérants</a>
+      <a href="{% url 'livraison:ajouter_gerant' %}" class="{% if section == 'gerants' and sous_section == 'ajouter' %}active{% endif %}">Ajouter un gérant</a>
+    </div>
+
+    <a class="admin-nav-link {% if section == 'clients' %}active{% endif %}" href="{% url 'livraison:liste_clients_admin' %}">
+      <i class="fa-solid fa-users"></i> <span>Clients</span>
+    </a>
+
+    <div class="admin-nav-sep"></div>
+
+    <a class="admin-nav-link {% if section == 'parametres' %}active{% endif %}" href="{% url 'livraison:parametres_admin' %}">
+      <i class="fa-solid fa-gear"></i> <span>Paramètres</span>
+    </a>
+  </nav>
+</aside>
+
+<main class="admin-main">
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    </div>
+  {% endfor %}
+  {% block contenu_admin %}{% endblock %}
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

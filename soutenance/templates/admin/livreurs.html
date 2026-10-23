@@ -1,0 +1,76 @@
+{% extends 'admin/base_admin.html' %}
+{% block titre_admin %}Livreurs{% endblock %}
+{% block contenu_admin %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="page-title mb-0">Livreurs</h3>
+</div>
+
+<ul class="nav nav-tabs-admin mb-3">
+  <li class="nav-item"><a class="nav-link {% if onglet == 'tous' %}active{% endif %}" href="?onglet=tous">Tous</a></li>
+  <li class="nav-item"><a class="nav-link {% if onglet == 'actifs' %}active{% endif %}" href="?onglet=actifs">Actifs</a></li>
+  <li class="nav-item">
+    <a class="nav-link {% if onglet == 'validation' %}active{% endif %}" href="?onglet=validation">
+      En validation {% if nb_validation %}<span class="badge bg-warning text-dark ms-1">{{ nb_validation }}</span>{% endif %}
+    </a>
+  </li>
+</ul>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover-admin align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-3">Nom</th><th>Email</th><th>Permis</th><th>Véhicule</th>
+            <th>Note</th><th>Statut</th><th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for livreur in livreurs %}
+          <tr>
+            <td class="ps-3">{{ livreur }}</td>
+            <td>{{ livreur.utilisateur.email }}</td>
+            <td>{{ livreur.num_permis }} ({{ livreur.get_type_permis_display }})</td>
+            <td>
+              {% if livreur.vehicule %}
+                {{ livreur.vehicule.get_type_vehicule_display }} — {{ livreur.vehicule.immatriculation }}
+              {% elif livreur.possede_vehicule_perso %}
+                {{ livreur.get_type_vehicule_perso_display }} (personnel)
+              {% else %}
+                <span class="text-muted">Aucun</span>
+              {% endif %}
+            </td>
+            <td>{{ livreur.note_moyenne }}/5</td>
+            <td>{% include 'admin/_badge_compte.html' with utilisateur=livreur.utilisateur %}</td>
+            <td class="text-end pe-3 text-nowrap">
+              <a href="{% url 'livraison:detail_utilisateur' livreur.utilisateur.pk %}" class="btn btn-sm btn-outline-admin" title="Voir"><i class="fa-solid fa-eye"></i></a>
+              {% if not livreur.utilisateur.est_actif %}
+              <form method="post" action="{% url 'livraison:valider_livreur' livreur.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-sm btn-success" title="Valider"><i class="fa-solid fa-check"></i></button>
+              </form>
+              {% else %}
+              <form method="post" action="{% url 'livraison:desactiver_compte' livreur.utilisateur.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-sm btn-outline-warning" title="Désactiver"><i class="fa-solid fa-ban"></i></button>
+              </form>
+              {% endif %}
+              <form method="post" action="{% url 'livraison:supprimer_compte' livreur.utilisateur.pk %}" class="d-inline"
+                    onsubmit="return confirm('Supprimer définitivement ce livreur ?');">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="fa-solid fa-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">Aucun livreur trouvé.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

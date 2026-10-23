@@ -1,0 +1,67 @@
+{% for vehicule in vehicules %}
+<tr>
+  <td class="ps-3">
+    {% if vehicule.photo %}
+      <img src="{{ vehicule.photo.url }}" alt="{{ vehicule.immatriculation }}" class="vehicule-miniature">
+    {% else %}
+      <span class="vehicule-miniature vehicule-miniature-vide">
+        {% if vehicule.type_vehicule == 'moto' %}🏍️{% else %}🚗{% endif %}
+      </span>
+    {% endif %}
+  </td>
+  <td>{{ vehicule.immatriculation }}</td>
+  <td>{{ vehicule.get_type_vehicule_display }}</td>
+  <td>{{ vehicule.marque }} {{ vehicule.modele }}</td>
+  <td>
+    {% if vehicule.couleur %}
+      <span class="couleur-pastille couleur-{{ vehicule.couleur|lower }}"></span> {{ vehicule.couleur }}
+    {% else %}
+      <span class="text-muted">—</span>
+    {% endif %}
+  </td>
+  <td>{{ vehicule.capacite_charge }} kg</td>
+  <td>{% if vehicule.livreur %}{{ vehicule.livreur }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+  <td>{% include 'admin/_badge_vehicule.html' %}</td>
+  <td class="text-end pe-3 text-nowrap">
+    <a href="{% url 'livraison:detail_vehicule' vehicule.pk %}" class="btn btn-sm btn-outline-admin" title="Voir"><i class="fa-solid fa-eye"></i></a>
+    {% if vehicule.etat == 'disponible' %}
+      <button type="button" class="btn btn-sm btn-outline-primary" title="Affecter"
+              data-bs-toggle="modal" data-bs-target="#modalAffecter{{ vehicule.pk }}"
+              {% if vehicule.type_vehicule == 'moto' %}
+                {% if not livreurs_moto %}disabled title="Aucun livreur avec le permis requis"{% endif %}
+              {% else %}
+                {% if not livreurs_voiture %}disabled title="Aucun livreur avec le permis requis"{% endif %}
+              {% endif %}>
+        <i class="fa-solid fa-user-plus"></i>
+      </button>
+      <form method="post" action="{% url 'livraison:mettre_en_maintenance' vehicule.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-warning" title="Maintenance"><i class="fa-solid fa-screwdriver-wrench"></i></button>
+      </form>
+      <form method="post" action="{% url 'livraison:supprimer_vehicule' vehicule.pk %}" class="d-inline" onsubmit="return confirm('Supprimer ce véhicule ?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="fa-solid fa-trash"></i></button>
+      </form>
+    {% elif vehicule.etat == 'affecte' %}
+      <form method="post" action="{% url 'livraison:liberer_vehicule' vehicule.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Libérer"><i class="fa-solid fa-lock-open"></i></button>
+      </form>
+    {% else %}
+      <form method="post" action="{% url 'livraison:marquer_disponible' vehicule.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-success" title="Marquer disponible"><i class="fa-solid fa-check"></i></button>
+      </form>
+      <form method="post" action="{% url 'livraison:supprimer_vehicule' vehicule.pk %}" class="d-inline" onsubmit="return confirm('Supprimer ce véhicule ?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="fa-solid fa-trash"></i></button>
+      </form>
+    {% endif %}
+    <button type="button" class="btn btn-sm btn-outline-admin" title="Modifier" data-bs-toggle="modal" data-bs-target="#modalModifier{{ vehicule.pk }}">
+      <i class="fa-solid fa-pen"></i>
+    </button>
+  </td>
+</tr>
+{% empty %}
+<tr><td colspan="9" class="text-center text-muted py-4">Aucun véhicule trouvé.</td></tr>
+{% endfor %}

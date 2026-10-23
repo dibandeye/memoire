@@ -1,0 +1,483 @@
+{% extends 'client/base_client.html' %}
+{% load livraison_extras %}
+{% block titre %}Nouvelle livraison{% endblock %}
+{% block contenu %}
+
+<div class="cl-wrap">
+  <h3 class="page-title mb-4">Nouvelle livraison</h3>
+
+  <!-- ── SECTION 1 : véhicule choisi ─────────────────────────────── -->
+  <div class="cl-vehicule">
+    <span class="cl-vehicule-icone">{{ icone_vehicule }}</span>
+    <div class="flex-grow-1">
+      <div class="cl-vehicule-nom">{{ type_vehicule_libelle }} — {{ prix|fcfa }}</div>
+      <div class="cl-vehicule-sub">Véhicule choisi</div>
+    </div>
+    <a href="{% url 'livraison:choisir_vehicule' %}" class="cl-lien">Changer de véhicule</a>
+  </div>
+
+  <form method="post" id="formLivraison" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="livraison_immediate" id="livraisonImmediate" value="{% if donnees and not donnees.livraison_immediate %}false{% else %}true{% endif %}">
+    <input type="hidden" name="date_programmee" id="dateProgrammee" value="{{ donnees.date_programmee|default:'' }}">
+
+    <div id="etapeSaisie">
+
+      <!-- ── SECTION 2 : adresses ──────────────────────────────────── -->
+      <section class="cl-section">
+        <h5 class="cl-section-titre"><span class="cl-num">1</span> Adresses</h5>
+
+        <div class="cl-toggle mb-4">
+          <label class="cl-toggle-opt">
+            <input type="radio" name="type_livraison" value="domicile" {% if donnees.type_livraison != 'point_relais' %}checked{% endif %}>
+            <span>🏠 À domicile</span>
+          </label>
+          <label class="cl-toggle-opt">
+            <input type="radio" name="type_livraison" value="point_relais" {% if donnees.type_livraison == 'point_relais' %}checked{% endif %}>
+            <span>📍 Point relais</span>
+          </label>
+        </div>
+
+        <label class="cl-label">📍 Adresse de départ</label>
+        <div class="cl-adresse">
+          <span class="cl-dot cl-dot-rouge"></span>
+          <div class="row g-2 flex-grow-1">
+            <div class="col-md-7"><input type="text" name="adresse_depart" class="cl-input" placeholder="Ex : 12 rue des Baobabs" value="{{ donnees.adresse_depart|default:'' }}" required></div>
+            <div class="col-md-5"><input type="text" name="ville_depart" class="cl-input" placeholder="Ville" value="{{ donnees.ville_depart|default:'' }}" required></div>
+          </div>
+        </div>
+
+        <div id="blocDomicile">
+          <label class="cl-label">🏁 Adresse de destination</label>
+          <div class="cl-adresse">
+            <span class="cl-dot cl-dot-vert"></span>
+            <div class="row g-2 flex-grow-1">
+              <div class="col-md-7"><input type="text" name="adresse_destination" class="cl-input" placeholder="Ex : Cité Keur Gorgui, villa 24" value="{{ donnees.adresse_destination|default:'' }}" required></div>
+              <div class="col-md-5"><input type="text" name="ville_destination" class="cl-input" placeholder="Ville" value="{{ donnees.ville_destination|default:'' }}" required></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="blocRelais" hidden>
+          <label class="cl-label">🏁 Point relais de destination</label>
+          {% if points_relais %}
+          <div class="cl-adresse">
+            <span class="cl-dot cl-dot-vert"></span>
+            <select name="point_relais" class="cl-input" required>
+              <option value="">Choisir un point relais</option>
+              {% for relais in points_relais %}
+              <option value="{{ relais.pk }}" data-libelle="{{ relais.nom }} — {{ relais.adresse }}, {{ relais.ville }}" {% if donnees.point_relais == relais.pk|stringformat:'s' %}selected{% endif %}>
+                {{ relais.nom }} — {{ relais.adresse }}, {{ relais.ville }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% else %}
+          <p class="cl-vide">Aucun point relais n'est disponible pour le moment. Choisissez la livraison à domicile.</p>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- ── SECTION : paiement ────────────────────────────────────── -->
+      <section class="cl-section">
+        <h5 class="cl-section-titre"><span class="cl-num">2</span> Paiement</h5>
+
+        <label class="cl-label">Qui paie la livraison ?</label>
+        <div class="cl-toggle cl-toggle-payeur mb-4">
+          <label class="cl-toggle-opt">
+            <input type="radio" name="payeur" value="client" {% if donnees.payeur != 'destinataire' %}checked{% endif %}>
+            <span>👤 Je paie moi-même</span>
+          </label>
+          <label class="cl-toggle-opt" id="optPayeurDestinataire">
+            <input type="radio" name="payeur" value="destinataire" {% if donnees.payeur == 'destinataire' %}checked{% endif %}>
+            <span>👥 Le destinataire paie à la récupération</span>
+          </label>
+        </div>
+
+        <label class="cl-label">Comment souhaitez-vous payer ?</label>
+        <div class="cl-pay-grid">
+          <label class="cl-pay-opt cl-pay-especes">
+            <input type="radio" name="mode_paiement" value="especes" data-libelle="Espèces" {% if donnees.mode_paiement != 'wave' and donnees.mode_paiement != 'orange_money' %}checked{% endif %}>
+            <span class="cl-pay-carte">
+              <span class="cl-pay-icone"><i class="fa-solid fa-money-bill-wave"></i></span>
+              <span class="cl-pay-titre">Espèces</span>
+              <span class="cl-pay-sub" id="subEspeces">Au livreur</span>
+            </span>
+          </label>
+          <label class="cl-pay-opt cl-pay-wave" data-mobile>
+            <input type="radio" name="mode_paiement" value="wave" data-libelle="Wave" {% if donnees.mode_paiement == 'wave' %}checked{% endif %}>
+            <span class="cl-pay-carte">
+              <span class="cl-pay-icone"><i class="fa-solid fa-mobile-screen-button"></i></span>
+              <span class="cl-pay-titre">Wave</span>
+              <span class="cl-pay-sub">Par mobile</span>
+            </span>
+          </label>
+          <label class="cl-pay-opt cl-pay-om" data-mobile>
+            <input type="radio" name="mode_paiement" value="orange_money" data-libelle="Orange Money" {% if donnees.mode_paiement == 'orange_money' %}checked{% endif %}>
+            <span class="cl-pay-carte">
+              <span class="cl-pay-icone"><i class="fa-solid fa-mobile-screen-button"></i></span>
+              <span class="cl-pay-titre">Orange Money</span>
+              <span class="cl-pay-sub">Par mobile</span>
+            </span>
+          </label>
+        </div>
+        <p class="cl-aide" id="aidePaiement"></p>
+      </section>
+
+      <!-- ── SECTION 3 : destinataire ──────────────────────────────── -->
+      <section class="cl-section">
+        <h5 class="cl-section-titre"><span class="cl-num">3</span> Destinataire</h5>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="cl-label">👤 Nom du destinataire</label>
+            <input type="text" name="nom_destinataire" class="cl-input" value="{{ donnees.nom_destinataire|default:'' }}" required>
+          </div>
+          <div class="col-md-6">
+            <label class="cl-label">📞 Téléphone du destinataire</label>
+            <input type="tel" name="tel_destinataire" class="cl-input" placeholder="77 000 00 00" value="{{ donnees.tel_destinataire|default:'' }}" required>
+          </div>
+        </div>
+
+        <label class="cl-label">📝 Description du contenu <span class="cl-opt">(optionnel)</span></label>
+        <textarea name="description_contenu" class="cl-input mb-3" rows="2" placeholder="Ex: Fragile, électronique, vêtements...">{{ donnees.description_contenu|default:'' }}</textarea>
+
+        <div id="instructions_block">
+        <label class="cl-label">💬 Instructions spéciales <span class="cl-opt">(optionnel)</span></label>
+        <div class="cl-chips">
+          <button type="button" class="cl-chip" data-texte="Appeler avant">📞 Appeler avant</button>
+          <button type="button" class="cl-chip" data-texte="Ne pas sonner">🔔 Ne pas sonner</button>
+          <button type="button" class="cl-chip" data-texte="Laisser chez le voisin">👤 Laisser chez voisin</button>
+          <button type="button" class="cl-chip" data-texte="Urgent">⚡ Urgent</button>
+        </div>
+        <textarea name="instructions_speciales" id="instructions_speciales" class="cl-input" rows="2">{{ donnees.instructions_speciales|default:'' }}</textarea>
+        </div>
+      </section>
+
+      <!-- ── SECTION 4 : quand ? ───────────────────────────────────── -->
+      <section class="cl-section">
+        <h5 class="cl-section-titre"><span class="cl-num">4</span> Quand ?</h5>
+        <div class="cl-quand">
+          <button type="button" class="cl-quand-opt" data-immediate="true">
+            <span class="cl-quand-titre">🟢 Maintenant</span>
+            <span class="cl-quand-sub">Dès que possible</span>
+          </button>
+          <button type="button" class="cl-quand-opt" data-immediate="false">
+            <span class="cl-quand-titre">📅 Programmer</span>
+            <span class="cl-quand-sub">Choisir date et heure</span>
+          </button>
+        </div>
+
+        <div id="blocProgrammer" class="cl-programmer" hidden>
+          <div class="row g-3">
+            <div class="col-sm-7">
+              <label class="cl-label">Date</label>
+              <input type="date" id="progDate" class="cl-input" min="{{ date_min|slice:':10' }}">
+            </div>
+            <div class="col-sm-5">
+              <label class="cl-label">Heure</label>
+              <input type="time" id="progHeure" class="cl-input">
+            </div>
+          </div>
+          <p class="cl-aide">Au plus tôt dans 1 heure.</p>
+          <p class="cl-erreur" id="erreurDate" hidden></p>
+        </div>
+      </section>
+
+      <button type="button" class="cl-btn-principal" id="btnVerifier">Vérifier ma demande <i class="fa-solid fa-arrow-right"></i></button>
+    </div>
+
+    <!-- ── SECTION 5 : récapitulatif ───────────────────────────────── -->
+    <div id="etapeRecap" hidden>
+      <div class="cl-recap">
+        <h5 class="cl-recap-titre">📋 Récapitulatif</h5>
+        <div class="cl-recap-ligne"><span>Véhicule</span><strong>{{ icone_vehicule }} {{ type_vehicule_libelle }}</strong></div>
+        <div class="cl-recap-ligne"><span>Mode</span><strong id="recapMode"></strong></div>
+        <div class="cl-recap-ligne"><span>De</span><strong id="recapDe"></strong></div>
+        <div class="cl-recap-ligne"><span>Vers</span><strong id="recapVers"></strong></div>
+        <div class="cl-recap-ligne"><span>Destinataire</span><strong id="recapDestinataire"></strong></div>
+        <div class="cl-recap-ligne"><span>Quand</span><strong id="recapQuand"></strong></div>
+        <div class="cl-recap-paiement">
+          <div class="cl-recap-paiement-titre">💰 Paiement</div>
+          <div class="cl-recap-ligne"><span>Mode</span><strong id="recapModePaiement"></strong></div>
+          <div class="cl-recap-ligne"><span>Payeur</span><strong id="recapPayeur"></strong></div>
+          <div class="cl-recap-ligne"><span>Montant</span><strong>{{ prix|fcfa }}</strong></div>
+        </div>
+        <div class="cl-recap-prix"><span>Prix estimé</span><span>{{ prix|fcfa }}</span></div>
+      </div>
+
+      <button type="submit" class="cl-btn-principal"><i class="fa-solid fa-circle-check"></i> Confirmer la livraison</button>
+      <button type="button" class="cl-btn-retour" id="btnModifier"><i class="fa-solid fa-arrow-left"></i> Modifier</button>
+    </div>
+  </form>
+</div>
+
+<style>
+  .cl-wrap { max-width: 760px; margin: 0 auto; }
+
+  .cl-vehicule { display: flex; align-items: center; gap: 1rem; background: var(--primary-light); border-radius: 14px; padding: 1rem 1.3rem; margin-bottom: 1.75rem; }
+  .cl-vehicule-icone { font-size: 2rem; }
+  .cl-vehicule-nom { font-weight: 800; color: var(--primary); font-size: 1.05rem; }
+  .cl-vehicule-sub { font-size: .8rem; color: #6b7280; }
+  .cl-lien { font-size: .85rem; font-weight: 600; color: var(--primary); white-space: nowrap; }
+
+  .cl-section { background: #fff; border: 1px solid #eceef3; border-radius: 16px; padding: 1.6rem; margin-bottom: 1.5rem; }
+  .cl-section-titre { display: flex; align-items: center; gap: .6rem; font-weight: 700; color: #1f2937; margin-bottom: 1.3rem; }
+  .cl-num { width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: #fff; font-size: .85rem; display: inline-flex; align-items: center; justify-content: center; }
+
+  .cl-label { display: block; font-size: .85rem; font-weight: 600; color: #374151; margin-bottom: .45rem; }
+  .cl-opt { font-weight: 400; color: #9ca3af; }
+  .cl-input { width: 100%; padding: .75rem .95rem; border-radius: 10px; border: 1.5px solid #e5e7ef; font: inherit; font-size: .92rem; background: #fafbff; transition: border-color .2s ease, box-shadow .2s ease; }
+  .cl-input:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(26,35,126,.08); }
+  .cl-input.invalide { border-color: #dc3545; }
+
+  .cl-adresse { display: flex; align-items: center; gap: .9rem; margin-bottom: 1.2rem; }
+  .cl-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .cl-dot-rouge { background: #e53935; box-shadow: 0 0 0 4px rgba(229,57,53,.15); }
+  .cl-dot-vert { background: #00c853; box-shadow: 0 0 0 4px rgba(0,200,83,.15); }
+  .cl-vide { color: #6b7280; font-size: .9rem; background: #f8f9fd; border-radius: 10px; padding: .9rem 1rem; }
+
+  .cl-toggle { display: flex; gap: .8rem; }
+  .cl-toggle-opt { flex: 1; position: relative; cursor: pointer; }
+  .cl-toggle-opt input { position: absolute; opacity: 0; }
+  .cl-toggle-opt span { display: block; text-align: center; padding: .8rem; border: 2px solid #e5e7ef; border-radius: 12px; font-weight: 600; color: #4b5563; transition: all .2s ease; }
+  .cl-toggle-opt input:checked + span { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+  .cl-toggle-opt input:focus-visible + span { box-shadow: 0 0 0 4px rgba(26,35,126,.15); }
+
+  .cl-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .7rem; }
+  .cl-chip { border: 1.5px solid #e5e7ef; background: #fff; border-radius: 999px; padding: .4rem .9rem; font-size: .83rem; color: #4b5563; cursor: pointer; transition: all .2s ease; }
+  .cl-chip:hover { border-color: var(--primary); color: var(--primary); }
+  .cl-chip.actif { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  .cl-quand { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
+  .cl-quand-opt { display: flex; flex-direction: column; align-items: center; gap: .2rem; padding: 1.1rem; border: 2px solid #e5e7ef; border-radius: 14px; background: #fff; cursor: pointer; transition: all .2s ease; }
+  .cl-quand-opt:hover { border-color: var(--primary); }
+  .cl-quand-opt.actif { border-color: var(--primary); background: var(--primary-light); }
+  .cl-quand-titre { font-weight: 700; color: #1f2937; }
+  .cl-quand-sub { font-size: .8rem; color: #6b7280; }
+  .cl-programmer { margin-top: 1.2rem; padding: 1.2rem; background: #f8f9fd; border-radius: 12px; animation: clApparait .3s ease; }
+  .cl-aide { font-size: .8rem; color: #6b7280; margin: .6rem 0 0; }
+  .cl-erreur { font-size: .85rem; color: #dc3545; margin: .4rem 0 0; }
+  @keyframes clApparait { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+  .cl-recap { background: #fff; border: 1px solid #eceef3; border-radius: 16px; padding: 1.8rem; margin-bottom: 1.5rem; animation: clApparait .3s ease; }
+  .cl-recap-titre { font-weight: 700; margin-bottom: 1.1rem; }
+  .cl-recap-ligne { display: flex; justify-content: space-between; gap: 1rem; padding: .65rem 0; border-bottom: 1px dashed #e5e7ef; color: #6b7280; font-size: .93rem; }
+  .cl-recap-ligne strong { color: #1f2937; text-align: right; }
+  .cl-recap-prix { display: flex; justify-content: space-between; align-items: center; padding-top: 1.1rem; margin-top: .4rem; border-top: 2px solid #e5e7ef; font-weight: 800; font-size: 1.4rem; color: var(--primary); }
+
+  .cl-btn-principal { display: flex; align-items: center; justify-content: center; gap: .6rem; width: 100%; border: none; border-radius: 14px; padding: 1rem; background: var(--primary); color: #fff; font-weight: 700; font-size: 1.05rem; box-shadow: 0 10px 24px rgba(26,35,126,.25); transition: transform .15s ease, box-shadow .2s ease; }
+  .cl-btn-principal:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(26,35,126,.3); }
+  .cl-btn-retour { display: block; margin: 1rem auto 0; border: none; background: transparent; color: #4b5563; font-weight: 600; }
+  .cl-btn-retour:hover { color: var(--primary); }
+
+  /* ── Paiement ── */
+  .cl-pay-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; }
+  .cl-pay-opt { position: relative; cursor: pointer; margin: 0; }
+  .cl-pay-opt[hidden] { display: none; }
+  .cl-pay-opt input { position: absolute; opacity: 0; }
+  .cl-pay-carte { display: flex; flex-direction: column; align-items: center; gap: .25rem; padding: 1.1rem .6rem; border: 2px solid #e5e7ef; border-radius: 14px; background: #fff; text-align: center; transition: all .2s ease; height: 100%; }
+  .cl-pay-icone { width: 46px; height: 46px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1.25rem; color: #fff; margin-bottom: .3rem; }
+  .cl-pay-titre { font-weight: 700; color: #1f2937; }
+  .cl-pay-sub { font-size: .78rem; color: #6b7280; }
+  .cl-pay-especes .cl-pay-icone { background: #00C853; }
+  .cl-pay-wave .cl-pay-icone    { background: #1877F2; }
+  .cl-pay-om .cl-pay-icone      { background: #FF6600; }
+  .cl-pay-opt:hover .cl-pay-carte { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.07); }
+  .cl-pay-especes input:checked + .cl-pay-carte { border-color: #00C853; background: #e8faf0; }
+  .cl-pay-wave input:checked + .cl-pay-carte    { border-color: #1877F2; background: #e8f1fe; }
+  .cl-pay-om input:checked + .cl-pay-carte      { border-color: #FF6600; background: #fff0e6; }
+  .cl-pay-opt input:focus-visible + .cl-pay-carte { box-shadow: 0 0 0 4px rgba(26,35,126,.15); }
+  .cl-recap-paiement { background: #f8f9fd; border-radius: 12px; padding: .4rem 1rem .2rem; margin-top: 1rem; }
+  .cl-recap-paiement-titre { font-weight: 700; color: #1f2937; padding-top: .5rem; }
+  .cl-recap-paiement .cl-recap-ligne:last-child { border-bottom: none; }
+
+  @media (max-width: 576px) {
+    .cl-pay-grid { grid-template-columns: 1fr; }
+    .cl-pay-carte { flex-direction: row; justify-content: flex-start; gap: .8rem; padding: .8rem 1rem; text-align: left; }
+    .cl-pay-icone { margin-bottom: 0; flex-shrink: 0; }
+    .cl-toggle-payeur { flex-direction: column; }
+    .cl-section { padding: 1.2rem; }
+    .cl-vehicule { flex-wrap: wrap; }
+    .cl-quand { grid-template-columns: 1fr; }
+  }
+</style>
+
+<script>
+(function () {
+  const form = document.getElementById('formLivraison');
+  const champImmediate = document.getElementById('livraisonImmediate');
+  const champDateProgrammee = document.getElementById('dateProgrammee');
+  const progDate = document.getElementById('progDate');
+  const progHeure = document.getElementById('progHeure');
+  const erreurDate = document.getElementById('erreurDate');
+  const instructions = document.getElementById('instructions_speciales');
+
+  // ── Mode de livraison : domicile / point relais ──────────────────
+  function majMode() {
+    const relais = form.type_livraison.value === 'point_relais';
+    document.getElementById('blocDomicile').hidden = relais;
+    document.getElementById('blocRelais').hidden = !relais;
+
+    // Instructions spéciales : uniquement pour la livraison à domicile.
+    // Un champ désactivé n'est pas envoyé avec le formulaire.
+    document.getElementById('instructions_block').style.display = relais ? 'none' : 'block';
+    instructions.disabled = relais;
+    if (relais) {
+      instructions.value = '';
+      majChips();
+    }
+    majPaiement();
+  }
+
+  // ── Paiement : payeur et mode ──────────────────────────────────────
+  // À domicile : seul le client paie. En point relais, le destinataire peut payer,
+  // mais uniquement en espèces au gérant.
+  function majPaiement() {
+    const relais = form.type_livraison.value === 'point_relais';
+    const optDestinataire = document.getElementById('optPayeurDestinataire');
+    optDestinataire.hidden = !relais;
+    if (!relais) form.querySelector('input[name="payeur"][value="client"]').checked = true;
+
+    const destinatairePaie = relais && form.payeur.value === 'destinataire';
+    document.querySelectorAll('.cl-pay-opt[data-mobile]').forEach(function (opt) {
+      opt.hidden = destinatairePaie;
+      opt.querySelector('input').disabled = destinatairePaie;
+    });
+    if (destinatairePaie) form.querySelector('input[name="mode_paiement"][value="especes"]').checked = true;
+
+    document.getElementById('subEspeces').textContent = destinatairePaie ? 'Au gérant' : 'Au livreur';
+    const mode = form.mode_paiement.value;
+    document.getElementById('aidePaiement').textContent =
+      destinatairePaie ? "Le destinataire réglera en espèces au gérant du point relais, au moment de récupérer le colis."
+      : mode === 'especes' ? "Vous réglerez en espèces directement au livreur."
+      : "Après validation, les instructions de paiement (numéro et référence) s'afficheront dans le suivi de votre livraison.";
+  }
+  form.querySelectorAll('input[name="payeur"], input[name="mode_paiement"]').forEach(function (r) {
+    r.addEventListener('change', majPaiement);
+  });
+  function libelleModePaiement() {
+    const choisi = form.querySelector('input[name="mode_paiement"]:checked');
+    if (!choisi) return '';
+    if (choisi.value === 'especes') return form.payeur.value === 'destinataire' ? 'Espèces au gérant' : 'Espèces au livreur';
+    return choisi.dataset.libelle;
+  }
+  form.querySelectorAll('input[name="type_livraison"]').forEach(function (r) { r.addEventListener('change', majMode); });
+
+  // ── Suggestions rapides → instructions spéciales ─────────────────
+  function lignesInstructions() {
+    return instructions.value.split(/\s*[.\n]\s*/).map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+  function majChips() {
+    const lignes = lignesInstructions();
+    document.querySelectorAll('.cl-chip').forEach(function (chip) {
+      chip.classList.toggle('actif', lignes.includes(chip.dataset.texte));
+    });
+  }
+  document.querySelectorAll('.cl-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      let lignes = lignesInstructions();
+      if (lignes.includes(chip.dataset.texte)) {
+        lignes = lignes.filter(function (l) { return l !== chip.dataset.texte; });
+      } else {
+        lignes.push(chip.dataset.texte);
+      }
+      instructions.value = lignes.length ? lignes.join('. ') + '.' : '';
+      majChips();
+    });
+  });
+  instructions.addEventListener('input', majChips);
+
+  // ── Quand ? Maintenant / Programmer ──────────────────────────────
+  function majQuand() {
+    const immediate = champImmediate.value !== 'false';
+    document.querySelectorAll('.cl-quand-opt').forEach(function (b) {
+      b.classList.toggle('actif', (b.dataset.immediate === 'true') === immediate);
+    });
+    document.getElementById('blocProgrammer').hidden = immediate;
+  }
+  document.querySelectorAll('.cl-quand-opt').forEach(function (b) {
+    b.addEventListener('click', function () { champImmediate.value = b.dataset.immediate; majQuand(); });
+  });
+  if (champDateProgrammee.value) {
+    const [d, h] = champDateProgrammee.value.split('T');
+    progDate.value = d || '';
+    progHeure.value = (h || '').slice(0, 5);
+  }
+
+  function dateProgrammeeValide() {
+    erreurDate.hidden = true;
+    if (champImmediate.value !== 'false') { champDateProgrammee.value = ''; return true; }
+    if (!progDate.value || !progHeure.value) {
+      erreurDate.textContent = "Choisissez une date et une heure.";
+      erreurDate.hidden = false;
+      return false;
+    }
+    const choisie = new Date(progDate.value + 'T' + progHeure.value);
+    if (choisie.getTime() < Date.now() + 60 * 60 * 1000) {
+      erreurDate.textContent = "La livraison doit être programmée au moins 1 heure à l'avance.";
+      erreurDate.hidden = false;
+      return false;
+    }
+    champDateProgrammee.value = progDate.value + 'T' + progHeure.value;
+    return true;
+  }
+
+  // ── Validation + récapitulatif ───────────────────────────────────
+  function saisieValide() {
+    const champs = document.getElementById('etapeSaisie').querySelectorAll('input, select, textarea');
+    for (const champ of champs) {
+      champ.classList.remove('invalide');
+      if (champ.closest('[hidden]') || champ.type === 'radio') continue;
+      if (champ.required && !champ.value.trim()) {
+        champ.classList.add('invalide');
+        champ.focus();
+        return false;
+      }
+    }
+    if (form.type_livraison.value === 'point_relais' && !form.point_relais) return false;
+    return dateProgrammeeValide();
+  }
+
+  function formaterDate(valeur) {
+    const d = new Date(valeur);
+    return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) +
+      ' à ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function remplirRecap() {
+    const relais = form.type_livraison.value === 'point_relais';
+    document.getElementById('recapMode').textContent = relais ? '📍 Point relais' : '🏠 À domicile';
+    document.getElementById('recapDe').textContent = form.adresse_depart.value.trim() + ', ' + form.ville_depart.value.trim();
+    document.getElementById('recapVers').textContent = relais
+      ? form.point_relais.selectedOptions[0].dataset.libelle
+      : form.adresse_destination.value.trim() + ', ' + form.ville_destination.value.trim();
+    document.getElementById('recapDestinataire').textContent = form.nom_destinataire.value.trim() + ' - ' + form.tel_destinataire.value.trim();
+    document.getElementById('recapModePaiement').textContent = libelleModePaiement();
+    document.getElementById('recapPayeur').textContent = form.payeur.value === 'destinataire' ? 'Destinataire' : 'Client (vous)';
+    document.getElementById('recapQuand').textContent = champImmediate.value === 'false'
+      ? formaterDate(champDateProgrammee.value)
+      : 'Maintenant';
+  }
+
+  function afficherEtape(recap) {
+    document.getElementById('etapeSaisie').hidden = recap;
+    document.getElementById('etapeRecap').hidden = !recap;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  document.getElementById('btnVerifier').addEventListener('click', function () {
+    if (!saisieValide()) return;
+    remplirRecap();
+    afficherEtape(true);
+  });
+  document.getElementById('btnModifier').addEventListener('click', function () { afficherEtape(false); });
+  form.addEventListener('submit', function (e) {
+    if (!saisieValide()) { e.preventDefault(); afficherEtape(false); }
+  });
+
+  majMode();
+  majChips();
+  majQuand();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% if livraison.statut == 'en_attente' %}
+  <span class="badge bg-warning text-dark">En attente</span>
+{% elif livraison.statut == 'livree' %}
+  <span class="badge bg-success">Livrée</span>
+{% elif livraison.statut == 'annulee' %}
+  <span class="badge bg-danger">Annulée</span>
+{% elif livraison.statut == 'non_recupere' %}
+  <span class="badge bg-dark">Non récupéré</span>
+{% elif livraison.statut == 'probleme' %}
+  <span class="badge" style="background:#7c2d12;color:#fff;">Problème</span>
+{% else %}
+  <span class="badge" style="background:#6f42c1;">{{ livraison.get_statut_display }}</span>
+{% endif %}

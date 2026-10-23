@@ -1,0 +1,171 @@
+{% extends 'admin/base_admin.html' %}
+{% block titre_admin %}Livraisons{% endblock %}
+{% block contenu_admin %}
+<h3 class="page-title">Livraisons</h3>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between">
+      <form method="get" class="d-flex gap-2 flex-grow-1" style="max-width:420px;">
+        <input type="hidden" name="statut" value="{{ filtre }}">
+        <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Rechercher un client, un destinataire, un #ID...">
+        <button type="submit" class="btn btn-admin text-nowrap"><i class="fa-solid fa-magnifying-glass"></i></button>
+      </form>
+
+      <div class="filter-tabs d-flex flex-wrap gap-2">
+        <a href="?statut=toutes{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if filtre == 'toutes' %}btn-admin{% else %}btn-outline-admin{% endif %}">Tous</a>
+        <a href="?statut=en_attente{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if filtre == 'en_attente' %}btn-admin{% else %}btn-outline-admin{% endif %}">En attente</a>
+        <a href="?statut=en_cours{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if filtre == 'en_cours' %}btn-admin{% else %}btn-outline-admin{% endif %}">En cours</a>
+        <a href="?statut=livrees{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if filtre == 'livrees' %}btn-admin{% else %}btn-outline-admin{% endif %}">Livrées</a>
+        <a href="?statut=annulees{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if filtre == 'annulees' %}btn-admin{% else %}btn-outline-admin{% endif %}">Annulées</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover-admin align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-3">#</th><th>Client</th><th>Type</th><th>Départ</th><th>Destination</th>
+            <th>Livreur</th><th>Statut</th><th>Date</th><th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in page_obj %}
+          <tr>
+            <td class="ps-3">#{{ l.id }}</td>
+            <td>{{ l.client }}</td>
+            <td>{{ l.get_type_vehicule_display }}</td>
+            <td>{{ l.ville_depart }}</td>
+            <td>{{ l.ville_destination }}</td>
+            <td>{% if l.livreur %}{{ l.livreur }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td>{% include 'admin/_badge_livraison.html' with livraison=l %}</td>
+            <td>{{ l.date_demande|date:"d/m/Y H:i" }}</td>
+            <td class="text-end pe-3 text-nowrap">
+              <a href="{% url 'livraison:detail_livraison' l.id %}" class="btn btn-sm btn-outline-admin" title="Voir"><i class="fa-solid fa-eye"></i></a>
+              {% if l.statut == 'en_attente' %}
+              <button type="button" class="btn btn-sm btn-outline-primary" title="Attribuer" data-bs-toggle="modal" data-bs-target="#modalAttribuer{{ l.id }}"><i class="fa-solid fa-user-plus"></i></button>
+              {% endif %}
+              {% if l.statut != 'livree' and l.statut != 'annulee' %}
+              <button type="button" class="btn btn-sm btn-outline-danger" title="Annuler" data-bs-toggle="modal" data-bs-target="#modalAnnuler{{ l.id }}"><i class="fa-solid fa-xmark"></i></button>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="text-center text-muted py-4">Aucune livraison trouvée.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="card-footer bg-white">
+    <nav>
+      <ul class="pagination justify-content-center mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?statut={{ filtre }}&q={{ q }}&page={{ page_obj.previous_page_number }}">Précédent</a></li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+        <li class="page-item {% if num == page_obj.number %}active{% endif %}">
+          <a class="page-link" href="?statut={{ filtre }}&q={{ q }}&page={{ num }}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?statut={{ filtre }}&q={{ q }}&page={{ page_obj.next_page_number }}">Suivant</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── MODALES ATTRIBUER ────────────────────────────────────────── -->
+{% for l in page_obj %}
+{% if l.statut == 'en_attente' %}
+<div class="modal fade" id="modalAttribuer{{ l.id }}" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header admin-card-header">
+        <h5 class="modal-title">Attribuer la livraison #{{ l.id }} ({{ l.get_type_vehicule_display }})</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        {% for lid, info in attributions.items %}
+          {% if lid == l.id %}
+            {% if info.lignes %}
+            <div class="table-responsive mb-3">
+              <table class="table table-sm align-middle">
+                <thead><tr><th>Livreur</th><th>Véhicule</th><th>Capacité</th><th>Compatibilité</th></tr></thead>
+                <tbody>
+                  {% for ligne in info.lignes %}
+                  <tr>
+                    <td>{{ ligne.livreur }}</td>
+                    <td>
+                      {% if ligne.vehicule_type == 'moto' %}Moto
+                      {% elif ligne.vehicule_type == 'voiture' %}Voiture
+                      {% elif ligne.vehicule_type == 'les_deux' %}Moto et voiture
+                      {% else %}—{% endif %}
+                    </td>
+                    <td>{% if ligne.vehicule_type %}{{ ligne.capacite }} kg{% else %}—{% endif %}</td>
+                    <td>{% if ligne.compatible %}<span class="text-success">✅ Compatible</span>{% else %}<span class="text-danger">❌ Incompatible</span>{% endif %}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% endif %}
+            {% if info.compatibles %}
+            <form method="post" action="{% url 'livraison:attribuer_livreur' l.id %}" class="d-flex gap-2">
+              {% csrf_token %}
+              <select name="livreur_id" class="form-select" required>
+                <option value="">Choisir un livreur compatible</option>
+                {% for livreur in info.compatibles %}
+                <option value="{{ livreur.pk }}">{{ livreur }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn btn-admin text-nowrap">Attribuer</button>
+            </form>
+            {% else %}
+            <p class="text-danger mb-0">Aucun livreur disponible avec un véhicule adapté pour ce type de service.</p>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── MODALE ANNULER ───────────────────────────────────────────── -->
+{% if l.statut != 'livree' and l.statut != 'annulee' %}
+<div class="modal fade" id="modalAnnuler{{ l.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'livraison:annuler_livraison_admin' l.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <div class="modal-content">
+        <div class="modal-header admin-card-header">
+          <h5 class="modal-title">Annuler la livraison #{{ l.id }}</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label">Motif d'annulation</label>
+          <textarea name="motif_annulation" class="form-control" rows="3" placeholder="Facultatif"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+          <button type="submit" class="btn btn-danger">Confirmer l'annulation</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock %}

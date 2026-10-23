@@ -1,0 +1,143 @@
+{% extends 'admin/base_admin.html' %}
+{% block titre_admin %}{{ utilisateur_cible }}{% endblock %}
+{% block contenu_admin %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h3 class="mb-0">{{ utilisateur_cible.prenom }} {{ utilisateur_cible.nom }}</h3>
+  {% if utilisateur_cible.role == 'livreur' %}
+  <a href="{% url 'livraison:liste_livreurs_admin' %}" class="btn btn-outline-admin">← Retour aux livreurs</a>
+  {% else %}
+  <a href="{% url 'livraison:liste_clients_admin' %}" class="btn btn-outline-admin">← Retour aux clients</a>
+  {% endif %}
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header admin-card-header">Informations générales</div>
+  <div class="card-body p-4">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Rôle</dt>
+      <dd class="col-sm-9">{{ utilisateur_cible.get_role_display }}</dd>
+
+      <dt class="col-sm-3">Email</dt>
+      <dd class="col-sm-9">{{ utilisateur_cible.email }}</dd>
+
+      <dt class="col-sm-3">Téléphone</dt>
+      <dd class="col-sm-9">{{ utilisateur_cible.telephone|default:"—" }}</dd>
+
+      <dt class="col-sm-3">Inscrit le</dt>
+      <dd class="col-sm-9">{{ utilisateur_cible.date_creation|date:"d/m/Y H:i" }}</dd>
+
+      <dt class="col-sm-3">Statut</dt>
+      <dd class="col-sm-9">
+        {% if utilisateur_cible.est_actif %}
+          <span class="badge bg-success">Actif</span>
+        {% else %}
+          <span class="badge bg-secondary">Désactivé / en attente</span>
+        {% endif %}
+      </dd>
+    </dl>
+  </div>
+</div>
+
+{% if utilisateur_cible.role == 'client' %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header admin-card-header">Profil client</div>
+  <div class="card-body p-4">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Adresse</dt>
+      <dd class="col-sm-9">{{ utilisateur_cible.client_profil.adresse|default:"—" }}</dd>
+      <dt class="col-sm-3">Ville</dt>
+      <dd class="col-sm-9">{{ utilisateur_cible.client_profil.ville|default:"—" }}</dd>
+      <dt class="col-sm-3">Livraisons</dt>
+      <dd class="col-sm-9">{{ utilisateur_cible.client_profil.livraisons.count }}</dd>
+    </dl>
+  </div>
+</div>
+{% elif utilisateur_cible.role == 'livreur' %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header admin-card-header">Profil livreur</div>
+  <div class="card-body p-4">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Numéro de permis</dt>
+      <dd class="col-sm-9">{{ utilisateur_cible.livreur_profil.num_permis }}</dd>
+      <dt class="col-sm-3">Type de permis</dt>
+      <dd class="col-sm-9">{{ utilisateur_cible.livreur_profil.get_type_permis_display }}</dd>
+      <dt class="col-sm-3">Disponibilité</dt>
+      <dd class="col-sm-9">{% if utilisateur_cible.livreur_profil.est_disponible %}Disponible{% else %}Indisponible{% endif %}</dd>
+      <dt class="col-sm-3">Note moyenne</dt>
+      <dd class="col-sm-9">{{ utilisateur_cible.livreur_profil.note_moyenne }}/5</dd>
+      <dt class="col-sm-3">Livraisons</dt>
+      <dd class="col-sm-9">{{ utilisateur_cible.livreur_profil.livraisons.count }}</dd>
+    </dl>
+  </div>
+</div>
+
+{% with vehicule=utilisateur_cible.livreur_profil.vehicule %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header admin-card-header">Véhicule affecté</div>
+  <div class="card-body p-4">
+    {% if vehicule %}
+    <div class="row g-3 align-items-center">
+      <div class="col-auto">
+        {% if vehicule.photo %}
+          <img src="{{ vehicule.photo.url }}" alt="{{ vehicule.immatriculation }}" class="rounded" style="width:110px;height:110px;object-fit:cover;">
+        {% else %}
+          <div class="d-flex align-items-center justify-content-center rounded" style="width:110px;height:110px;background:#e8eaf6;font-size:2.2rem;">
+            {% if vehicule.type_vehicule == 'moto' %}🏍️{% else %}🚗{% endif %}
+          </div>
+        {% endif %}
+      </div>
+      <div class="col">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Immatriculation</dt>
+          <dd class="col-sm-8">{{ vehicule.immatriculation }}</dd>
+          <dt class="col-sm-4">Couleur</dt>
+          <dd class="col-sm-8">
+            {% if vehicule.couleur %}<span class="couleur-pastille couleur-{{ vehicule.couleur|lower }}"></span> {{ vehicule.couleur }}{% else %}—{% endif %}
+          </dd>
+          <dt class="col-sm-4">Capacité de charge</dt>
+          <dd class="col-sm-8">{{ vehicule.capacite_charge }} kg</dd>
+        </dl>
+        <a href="{% url 'livraison:detail_vehicule' vehicule.pk %}" class="btn btn-sm btn-outline-admin mt-2">Voir la fiche du véhicule</a>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">Aucun véhicule d'entreprise affecté.</p>
+    {% endif %}
+  </div>
+</div>
+{% endwith %}
+{% endif %}
+
+<div class="card shadow-sm">
+  <div class="card-header admin-card-header">Actions</div>
+  <div class="card-body p-4 d-flex flex-wrap gap-2">
+    {% if utilisateur_cible.role == 'livreur' and not utilisateur_cible.est_actif %}
+    <form method="post" action="{% url 'livraison:valider_livreur' utilisateur_cible.livreur_profil.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.path }}">
+      <button type="submit" class="btn btn-success">Valider l'inscription</button>
+    </form>
+    {% endif %}
+
+    {% if utilisateur_cible.est_actif %}
+    <form method="post" action="{% url 'livraison:desactiver_compte' utilisateur_cible.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.path }}">
+      <button type="submit" class="btn btn-outline-warning">Désactiver le compte</button>
+    </form>
+    {% else %}
+    <form method="post" action="{% url 'livraison:activer_compte' utilisateur_cible.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.path }}">
+      <button type="submit" class="btn btn-outline-success">Activer le compte</button>
+    </form>
+    {% endif %}
+
+    <form method="post" action="{% url 'livraison:supprimer_compte' utilisateur_cible.pk %}"
+          onsubmit="return confirm('Supprimer définitivement ce compte ?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger">Supprimer le compte</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

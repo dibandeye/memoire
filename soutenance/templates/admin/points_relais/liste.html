@@ -1,0 +1,97 @@
+{% extends 'admin/base_admin.html' %}
+{% block titre_admin %}Points relais{% endblock %}
+{% block contenu_admin %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+  <h3 class="page-title mb-0">Gestion des points relais</h3>
+  <a href="{% url 'livraison:ajouter_point_relais' %}" class="btn btn-admin">
+    <i class="fa-solid fa-plus"></i> Ajouter un point relais
+  </a>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <form method="get" class="d-flex gap-2" style="max-width:420px;">
+      <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Rechercher par nom, ville, adresse...">
+      <button type="submit" class="btn btn-admin text-nowrap"><i class="fa-solid fa-magnifying-glass"></i></button>
+      {% if q %}<a href="{% url 'livraison:liste_points_relais' %}" class="btn btn-outline-secondary" title="Effacer"><i class="fa-solid fa-xmark"></i></a>{% endif %}
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover-admin align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-3">Nom</th><th>Ville</th><th>Téléphone</th><th>Gérants</th>
+            <th>Colis en attente</th><th>Statut</th><th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pr in points_relais %}
+          <tr>
+            <td class="ps-3">
+              <div class="fw-semibold">{{ pr.nom }}</div>
+              <small class="text-muted">{{ pr.adresse }}</small>
+            </td>
+            <td>{{ pr.ville }}</td>
+            <td>{{ pr.telephone|default:"—" }}</td>
+            <td>
+              {% if pr.nb_gerants %}
+                <span class="badge rounded-pill" style="background:#e8eaf6;color:#1a237e;"><i class="fa-solid fa-user-tie"></i> {{ pr.nb_gerants }}</span>
+              {% else %}
+                <span class="badge rounded-pill bg-warning text-dark" title="Aucun gérant"><i class="fa-solid fa-triangle-exclamation"></i> 0</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if pr.nb_colis %}
+                <span class="badge rounded-pill bg-primary"><i class="fa-solid fa-box"></i> {{ pr.nb_colis }}</span>
+              {% else %}
+                <span class="text-muted">0</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if pr.est_actif %}
+                <span class="badge bg-success">Actif</span>
+              {% else %}
+                <span class="badge bg-danger">Inactif</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-3 text-nowrap">
+              <a href="{% url 'livraison:detail_point_relais' pr.pk %}" class="btn btn-sm btn-outline-admin" title="Voir"><i class="fa-solid fa-eye"></i></a>
+              <a href="{% url 'livraison:modifier_point_relais' pr.pk %}" class="btn btn-sm btn-outline-secondary" title="Modifier"><i class="fa-solid fa-pen"></i></a>
+              {% if pr.est_actif %}
+              <form method="post" action="{% url 'livraison:desactiver_point_relais' pr.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-sm btn-outline-warning" title="Désactiver"><i class="fa-solid fa-ban"></i></button>
+              </form>
+              {% else %}
+              <form method="post" action="{% url 'livraison:activer_point_relais' pr.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-sm btn-outline-success" title="Activer"><i class="fa-solid fa-check"></i></button>
+              </form>
+              {% endif %}
+              <form method="post" action="{% url 'livraison:supprimer_point_relais' pr.pk %}" class="d-inline"
+                    onsubmit="return confirm('Supprimer définitivement le point relais « {{ pr.nom|escapejs }} » ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer" {% if pr.nb_colis %}disabled{% endif %}><i class="fa-solid fa-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-5">
+              <i class="fa-solid fa-location-dot fa-2x mb-2 d-block" style="color:#c5cae9;"></i>
+              {% if q %}Aucun point relais ne correspond à « {{ q }} ».{% else %}Aucun point relais enregistré pour le moment.{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

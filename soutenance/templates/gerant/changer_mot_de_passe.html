@@ -1,0 +1,35 @@
+{% extends 'gerant/base_gerant.html' %}
+{% block titre %}Changer mot de passe{% endblock %}
+{% block contenu %}
+<h3 class="page-title mb-4">Changer mon mot de passe</h3>
+
+<div class="ger-card" style="max-width:560px;">
+  <div class="ger-card-header"><i class="fa-solid fa-key"></i> Nouveau mot de passe</div>
+  <div class="p-4">
+    {% if mdp_provisoire %}
+    <div class="alert alert-warning small"><i class="fa-solid fa-circle-info"></i> Votre mot de passe actuel (provisoire) est votre adresse email.</div>
+    {% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="ancien_mdp" class="form-label fw-semibold">Mot de passe actuel</label>
+        <input type="password" id="ancien_mdp" name="ancien_mdp" class="form-control" autocomplete="current-password" required>
+      </div>
+      <div class="mb-3">
+        <label for="nouveau_mdp" class="form-label fw-semibold">Nouveau mot de passe</label>
+        <input type="password" id="nouveau_mdp" name="nouveau_mdp" class="form-control" minlength="8" autocomplete="new-password" required>
+        <div class="form-text">Au moins 8 caractères, différent de votre email.</div>
+      </div>
+      <div class="mb-4">
+        <label for="confirmation_mdp" class="form-label fw-semibold">Confirmer le nouveau mot de passe</label>
+        <input type="password" id="confirmation_mdp" name="confirmation_mdp" class="form-control" minlength="8" autocomplete="new-password" required>
+      </div>
+      <p class="small text-muted"><i class="fa-solid fa-right-to-bracket"></i> Vous serez déconnecté et devrez vous reconnecter avec le nouveau mot de passe.</p>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primaire"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+        <a href="{% url 'livraison:dashboard_gerant' %}" class="btn btn-secondary">Annuler</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

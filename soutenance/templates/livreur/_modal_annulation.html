@@ -1,0 +1,54 @@
+<div class="modal fade" id="modalAnnuler{{ livraison.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'livraison:annuler_livraison_livreur' livraison.id %}"
+          onchange="basculerAvertissementAnnulation({{ livraison.id }})">
+      {% csrf_token %}
+      <div class="modal-content annulation-modal">
+        <div class="modal-header border-0 pb-0">
+          <div>
+            <h5 class="modal-title text-danger fw-bold mb-1">Annuler la livraison #{{ livraison.id }}</h5>
+            <div class="text-muted small">Cette action est irréversible</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body pt-2">
+          <p class="mb-2 small fw-semibold text-muted">Choisissez le motif de l'annulation :</p>
+
+          <div class="motif-grid mb-3">
+            <label class="motif-option">
+              <input type="radio" name="motif" value="panne" id="motif_panne_{{ livraison.id }}" required>
+              <span class="motif-icone">🔧</span>
+              <span class="motif-texte">Panne de véhicule</span>
+            </label>
+            <label class="motif-option">
+              <input type="radio" name="motif" value="position" id="motif_position_{{ livraison.id }}" required>
+              <span class="motif-icone">📍</span>
+              <span class="motif-texte">Problème de position</span>
+            </label>
+            <label class="motif-option">
+              <input type="radio" name="motif" value="urgence" id="motif_urgence_{{ livraison.id }}" required>
+              <span class="motif-icone">🚨</span>
+              <span class="motif-texte">Urgence personnelle</span>
+            </label>
+            <label class="motif-option">
+              <input type="radio" name="motif" value="arrestation" id="motif_arrestation_{{ livraison.id }}" required>
+              <span class="motif-icone">👮</span>
+              <span class="motif-texte">Arrestation</span>
+            </label>
+          </div>
+
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-control" rows="2" placeholder="Décrivez la situation (optionnel)"></textarea>
+
+          <div id="avertissement_disponibilite_{{ livraison.id }}" class="alert alert-warning d-none mt-3 mb-0 alerte-clignote">
+            ⚠️ N'oubliez pas d'activer votre indisponibilité
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-danger-liv">Confirmer</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

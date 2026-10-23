@@ -1,0 +1,211 @@
+{% extends 'admin/base_admin.html' %}
+{% block titre_admin %}{{ point_relais.nom }}{% endblock %}
+{% block extra_css %}
+<style>
+  .info-ligne { display: flex; gap: .7rem; padding: .45rem 0; }
+  .info-ligne i { width: 18px; color: #1a237e; margin-top: .2rem; }
+  .horaire-ligne { display: flex; justify-content: space-between; padding: .35rem 0; border-bottom: 1px dashed #e5e7eb; }
+  .horaire-ligne:last-child { border-bottom: none; }
+
+  /* Code couleur selon l'urgence de récupération */
+  tr.urgence-ok       td:first-child { border-left: 4px solid #198754; }
+  tr.urgence-alerte   td:first-child { border-left: 4px solid #fd7e14; }
+  tr.urgence-critique td:first-child { border-left: 4px solid #dc3545; }
+  tr.urgence-expire   td:first-child { border-left: 4px solid #212529; }
+  tr.urgence-alerte   { background: #fff8f0; }
+  tr.urgence-critique { background: #fff1f2; }
+  tr.urgence-expire   { background: #f1f1f3; }
+  .pastille-jours { font-weight: 700; border-radius: 2rem; padding: .3rem .7rem; font-size: .8rem; white-space: nowrap; }
+  .pastille-ok       { background: #e6f4ea; color: #146c43; }
+  .pastille-alerte   { background: #fff3e0; color: #b45309; }
+  .pastille-critique { background: #fde2e4; color: #b02a37; }
+  .pastille-expire   { background: #212529; color: #fff; }
+  .legende span { font-size: .78rem; margin-right: .9rem; white-space: nowrap; }
+</style>
+{% endblock %}
+
+{% block contenu_admin %}
+<nav class="small mb-2"><a href="{% url 'livraison:liste_points_relais' %}" class="text-decoration-none" style="color:#1a237e;"><i class="fa-solid fa-arrow-left"></i> Points relais</a></nav>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+  <h3 class="page-title mb-0">
+    {{ point_relais.nom }}
+    {% if point_relais.est_actif %}<span class="badge bg-success fs-6 align-middle">Actif</span>{% else %}<span class="badge bg-danger fs-6 align-middle">Inactif</span>{% endif %}
+  </h3>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'livraison:modifier_point_relais' point_relais.pk %}" class="btn btn-outline-admin"><i class="fa-solid fa-pen"></i> Modifier</a>
+    <form method="post" action="{% url 'livraison:supprimer_point_relais' point_relais.pk %}" class="m-0"
+          onsubmit="return confirm('Supprimer définitivement ce point relais ?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger" {% if colis_en_attente %}disabled title="Des colis sont encore stockés"{% endif %}><i class="fa-solid fa-trash"></i> Supprimer</button>
+    </form>
+  </div>
+</div>
+
+{% if colis_expires %}
+<div class="alert alert-dark d-flex align-items-center gap-2">
+  <i class="fa-solid fa-circle-exclamation"></i>
+  {{ colis_expires|length }} colis ont dépassé la date limite de récupération.
+</div>
+{% endif %}
+
+<div class="row g-4 mb-4">
+  <!-- ══ SECTION 1 — INFORMATIONS GÉNÉRALES ═════════════════════ -->
+  <div class="col-lg-7">
+    <div class="card shadow-sm h-100">
+      <div class="card-header admin-card-header"><i class="fa-solid fa-circle-info"></i> Informations générales</div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="info-ligne"><i class="fa-solid fa-store"></i><div><small class="text-muted d-block">Nom</small>{{ point_relais.nom }}</div></div>
+            <div class="info-ligne"><i class="fa-solid fa-map-location-dot"></i><div><small class="text-muted d-block">Adresse</small>{{ point_relais.adresse }}</div></div>
+            <div class="info-ligne"><i class="fa-solid fa-city"></i><div><small class="text-muted d-block">Ville</small>{{ point_relais.ville }}</div></div>
+            <div class="info-ligne"><i class="fa-solid fa-phone"></i><div><small class="text-muted d-block">Téléphone</small>{{ point_relais.telephone|default:"—" }}</div></div>
+          </div>
+          <div class="col-md-6">
+            <h6 class="fw-bold mt-2 mt-md-0" style="color:#1a237e;"><i class="fa-regular fa-clock"></i> Horaires</h6>
+            <div class="horaire-ligne"><span>Lundi - Samedi</span><strong>09h00 - 19h00</strong></div>
+            <div class="horaire-ligne"><span>Dimanche</span><strong class="text-danger">Fermé</strong></div>
+            <p class="mt-2 mb-3">
+              {% if point_relais.est_ouvert_aujourd_hui %}
+                <span class="badge bg-success-subtle text-success-emphasis"><i class="fa-solid fa-door-open"></i> Ouvert aujourd'hui</span>
+              {% else %}
+                <span class="badge bg-secondary"><i class="fa-solid fa-door-closed"></i> Fermé aujourd'hui</span>
+              {% endif %}
+            </p>
+            {% if point_relais.est_actif %}
+            <form method="post" action="{% url 'livraison:desactiver_point_relais' point_relais.pk %}" class="m-0">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn btn-sm btn-outline-warning"><i class="fa-solid fa-ban"></i> Désactiver</button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url 'livraison:activer_point_relais' point_relais.pk %}" class="m-0">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-check"></i> Activer</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 2 — GÉRANTS ════════════════════════════════════ -->
+  <div class="col-lg-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-header admin-card-header"><i class="fa-solid fa-user-tie"></i> Gérants ({{ gerants|length }})</div>
+      <div class="card-body">
+        {% for affectation in gerants %}
+        <div class="d-flex align-items-center gap-2 py-2 {% if not forloop.last %}border-bottom{% endif %}">
+          <span class="avatar-initiales">{{ affectation.gerant.prenom|slice:":1" }}{{ affectation.gerant.nom|slice:":1" }}</span>
+          <div class="flex-grow-1 min-w-0">
+            <a href="{% url 'livraison:detail_gerant' affectation.gerant_id %}" class="fw-semibold text-truncate d-block text-decoration-none" style="color:#1a237e;">{{ affectation.gerant.prenom }} {{ affectation.gerant.nom }}</a>
+            <small class="text-muted">{{ affectation.gerant.telephone|default:affectation.gerant.email }} · depuis le {{ affectation.date_affectation|date:"d/m/Y" }}</small>
+          </div>
+          <form method="post" action="{% url 'livraison:retirer_gerant' point_relais.pk affectation.gerant_id %}" class="m-0"
+                onsubmit="return confirm('Retirer ce gérant du point relais ?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Retirer"><i class="fa-solid fa-xmark"></i> Retirer</button>
+          </form>
+        </div>
+        {% empty %}
+        <div class="alert alert-warning mb-3"><i class="fa-solid fa-triangle-exclamation"></i> Ce point relais n'a pas de gérant.</div>
+        {% endfor %}
+
+        <form method="post" action="{% url 'livraison:affecter_gerant' point_relais.pk %}" class="mt-3">
+          {% csrf_token %}
+          <label for="gerant_id" class="form-label fw-semibold small">Affecter un gérant</label>
+          <div class="d-flex gap-2">
+            <select id="gerant_id" name="gerant_id" class="form-select" required {% if not gerants_disponibles %}disabled{% endif %}>
+              <option value="">{% if gerants_disponibles %}Choisir un gérant...{% else %}Aucun gérant disponible{% endif %}</option>
+              {% for u in gerants_disponibles %}
+              <option value="{{ u.pk }}">{{ u.prenom }} {{ u.nom }} — {{ u.email }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-admin text-nowrap" {% if not gerants_disponibles %}disabled{% endif %}><i class="fa-solid fa-plus"></i> Affecter</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SECTION 3 — COLIS STOCKÉS ═════════════════════════════════ -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header admin-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <span><i class="fa-solid fa-boxes-stacked"></i> Colis actuellement stockés ({{ colis_en_attente|length }})</span>
+  </div>
+  <div class="px-3 pt-3 legende">
+    <span>🟢 3 jours ou plus</span><span>🟠 2 jours (jour 5)</span><span>🔴 1 jour ou moins (jour 7)</span><span>⚫ Expiré</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0 mt-2">
+        <thead>
+          <tr>
+            <th class="ps-3">#ID</th><th>Client</th><th>Destinataire</th><th>Date dépôt</th>
+            <th>Date limite</th><th>Jours restants</th><th>Statut</th><th class="text-end pe-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for colis in colis_en_attente %}
+          <tr class="urgence-{{ colis.urgence }}">
+            <td class="ps-3 fw-semibold">#{{ colis.id }}</td>
+            <td>{{ colis.client }}</td>
+            <td>{{ colis.nom_destinataire }}<br><small class="text-muted">{{ colis.tel_destinataire }}</small></td>
+            <td>{{ colis.date_depot_relais|date:"d/m/Y H:i"|default:"—" }}</td>
+            <td>{{ colis.date_limite_recuperation|date:"d/m/Y"|default:"—" }}</td>
+            <td>
+              {% if colis.jours_restants is None %}—
+              {% elif colis.urgence == 'expire' %}<span class="pastille-jours pastille-expire">⚫ Expiré</span>
+              {% else %}<span class="pastille-jours pastille-{{ colis.urgence }}">{% if colis.urgence == 'ok' %}🟢{% elif colis.urgence == 'alerte' %}🟠{% else %}🔴{% endif %} {{ colis.jours_restants }} j</span>
+              {% endif %}
+            </td>
+            <td>{% include 'admin/_badge_livraison.html' with livraison=colis %}</td>
+            <td class="text-end pe-3">
+              <form method="post" action="{% url 'livraison:marquer_colis_recupere_admin' point_relais.pk colis.id %}" class="m-0"
+                    onsubmit="return confirm('Confirmer la remise du colis #{{ colis.id }} au destinataire ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-success text-nowrap"><i class="fa-solid fa-hand-holding"></i> Récupéré</button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" class="text-center text-muted py-4">Aucun colis stocké dans ce point relais.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SECTION 4 — HISTORIQUE ════════════════════════════════════ -->
+<div class="card shadow-sm">
+  <div class="card-header admin-card-header"><i class="fa-solid fa-clock-rotate-left"></i> Historique — colis récupérés et expirés</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover-admin align-middle mb-0">
+        <thead>
+          <tr><th class="ps-3">#ID</th><th>Client</th><th>Destinataire</th><th>Date dépôt</th><th>Date limite</th><th>Récupéré le</th><th>Statut</th></tr>
+        </thead>
+        <tbody>
+          {% for colis in historique %}
+          <tr>
+            <td class="ps-3 fw-semibold">#{{ colis.id }}</td>
+            <td>{{ colis.client }}</td>
+            <td>{{ colis.nom_destinataire }}</td>
+            <td>{{ colis.date_depot_relais|date:"d/m/Y" }}</td>
+            <td>{{ colis.date_limite_recuperation|date:"d/m/Y"|default:"—" }}</td>
+            <td>{% if colis.statut == 'livree' %}{{ colis.date_livraison|date:"d/m/Y H:i" }}{% else %}—{% endif %}</td>
+            <td>{% include 'admin/_badge_livraison.html' with livraison=colis %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">Aucun historique pour ce point relais.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

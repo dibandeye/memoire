@@ -1,0 +1,54 @@
+{% extends 'livreur/base_livreur.html' %}
+{% block titre %}Mon véhicule{% endblock %}
+{% block contenu %}
+<h3 class="page-title mb-4">Mon véhicule</h3>
+
+{% if livreur.vehicule %}
+  <div class="liv-card mb-3" style="max-width:520px;">
+    <div class="row g-0">
+      <div class="col-4">
+        {% if livreur.vehicule.photo %}
+          <img src="{{ livreur.vehicule.photo.url }}" alt="{{ livreur.vehicule.immatriculation }}"
+               class="w-100 h-100 rounded-start" style="object-fit:cover; min-height:180px;">
+        {% else %}
+          <div class="w-100 h-100 rounded-start d-flex align-items-center justify-content-center"
+               style="min-height:180px; background:#e8eaf6; font-size:3rem;">
+            {% if livreur.vehicule.type_vehicule == 'moto' %}🏍️{% else %}🚗{% endif %}
+          </div>
+        {% endif %}
+      </div>
+      <div class="col-8">
+        <div class="p-4">
+          {% if livreur.possede_vehicule_perso %}
+          <p class="mb-2 text-warning small"><i class="fa-solid fa-triangle-exclamation me-1"></i> Véhicule temporaire de l'entreprise, en attendant la réparation de votre véhicule personnel.</p>
+          {% endif %}
+          <p class="mb-2"><i class="fa-solid fa-car-side text-muted me-2"></i><strong>Type :</strong> {{ livreur.vehicule.get_type_vehicule_display }}</p>
+          <p class="mb-2"><i class="fa-solid fa-tag text-muted me-2"></i><strong>Marque :</strong> {{ livreur.vehicule.marque|default:"—" }} {{ livreur.vehicule.modele }}</p>
+          <p class="mb-2"><i class="fa-solid fa-palette text-muted me-2"></i><strong>Couleur :</strong> {{ livreur.vehicule.couleur|default:"—" }}</p>
+          <p class="mb-2"><i class="fa-solid fa-id-card text-muted me-2"></i><strong>Immatriculation :</strong> {{ livreur.vehicule.immatriculation }}</p>
+          <p class="mb-2"><i class="fa-solid fa-weight-hanging text-muted me-2"></i><strong>Capacité :</strong> {{ livreur.vehicule.capacite_charge }} kg</p>
+          <p class="mb-0"><i class="fa-solid fa-circle-check text-success me-2"></i><strong>État :</strong> ✅ Affecté</p>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% if livreur.possede_vehicule_perso %}
+  <div class="liv-card p-4" style="max-width:480px;">
+    <h5 class="mb-3">
+      {% if livreur.type_vehicule_perso == 'moto' %}🏍️{% else %}🚗{% endif %} Véhicule personnel
+    </h5>
+    <p class="mb-2"><strong>Type :</strong> {{ livreur.get_type_vehicule_perso_display }}</p>
+    <p class="mb-2"><strong>Immatriculation :</strong> {{ livreur.immatriculation_perso }}</p>
+    <p class="mb-0"><strong>Capacité :</strong> {{ livreur.capacite_charge_perso }} kg</p>
+  </div>
+{% endif %}
+
+{% if not livreur.vehicule and not livreur.possede_vehicule_perso %}
+  <div class="liv-card p-4 border-start border-4 border-warning" style="max-width:480px;">
+    <h5 class="text-warning mb-2">⚠️ Aucun véhicule affecté</h5>
+    <p class="text-muted mb-0">Contactez l'administrateur pour vous faire affecter un véhicule ou déclarer un véhicule personnel.</p>
+  </div>
+{% endif %}
+{% endblock %}

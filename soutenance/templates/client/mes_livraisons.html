@@ -1,0 +1,96 @@
+{% extends 'client/base_client.html' %}
+{% load livraison_extras %}
+{% block titre %}Mes livraisons{% endblock %}
+{% block contenu %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h3 class="page-title mb-0">Mes livraisons</h3>
+  <a href="{% url 'livraison:choisir_vehicule' %}" class="btn btn-primaire-cli"><i class="fa-solid fa-plus"></i> Nouvelle livraison</a>
+</div>
+
+<!-- ── FILTRES ────────────────────────────────────────────────────── -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="?statut=toutes" class="pill-filtre {% if filtre == 'toutes' %}active{% endif %}">Toutes</a>
+  <a href="?statut=en_attente" class="pill-filtre {% if filtre == 'en_attente' %}active{% endif %}">En attente</a>
+  <a href="?statut=en_cours" class="pill-filtre {% if filtre == 'en_cours' %}active{% endif %}">En cours</a>
+  <a href="?statut=livrees" class="pill-filtre {% if filtre == 'livrees' %}active{% endif %}">Livrées</a>
+  <a href="?statut=annulees" class="pill-filtre {% if filtre == 'annulees' %}active{% endif %}">Annulées</a>
+</div>
+
+{% if q %}
+<p class="text-muted small mb-3">Résultats de recherche pour « {{ q }} » — <a href="?statut={{ filtre }}">effacer</a></p>
+{% endif %}
+
+{% if livraisons %}
+  {% for livraison in livraisons %}
+  <div class="livraison-card fade-in-up">
+    <div class="livraison-card-top">
+      <div class="livraison-id">
+        <span class="livraison-hash">#{{ livraison.id }}</span>
+        <span class="livraison-type">{% if livraison.type_vehicule == 'moto' %}🏍️{% elif livraison.type_vehicule == 'voiture' %}🚗{% else %}🚚{% endif %} {{ livraison.get_type_vehicule_display }}</span>
+      </div>
+      <span class="badge-pill-statut {{ livraison.statut|classe_badge_statut }}">{{ livraison.get_statut_display }}</span>
+    </div>
+    <div class="livraison-route">
+      <i class="fa-solid fa-location-dot text-muted"></i> {{ livraison.ville_depart }}
+      <i class="fa-solid fa-arrow-right-long mx-2 text-muted"></i>
+      <i class="fa-solid fa-flag-checkered text-muted"></i> {{ livraison.ville_destination }}
+    </div>
+    {% if livraison.statut != 'annulee' %}
+    <div class="livraison-paiement mb-2 d-flex flex-wrap align-items-center gap-2 small">
+      {% include 'paiement/_badge_statut.html' %}
+      <span class="text-muted">·</span> {% include 'paiement/_mode.html' %}
+      {% if livraison.payeur == 'destinataire' %}<span class="text-muted">· payé par le destinataire</span>{% endif %}
+    </div>
+    {% endif %}
+    <div class="livraison-bottom">
+      <div class="livraison-meta">
+        {% if livraison.livreur %}
+          <span><i class="fa-solid fa-user text-muted"></i> {{ livraison.livreur }} <span class="text-warning">⭐{{ livraison.livreur.note_moyenne|floatformat:1 }}</span></span>
+        {% else %}
+          <span class="text-muted"><i class="fa-solid fa-user-slash"></i> Livreur non attribué</span>
+        {% endif %}
+        <span class="text-muted"><i class="fa-regular fa-calendar"></i> {{ livraison.date_demande|date:"d/m/Y" }}</span>
+        <span class="text-muted"><i class="fa-solid fa-coins"></i> {{ livraison.montant }} FCFA</span>
+      </div>
+      <div class="livraison-actions">
+        {% if livraison.statut == 'en_attente' %}
+          <a href="{% url 'livraison:modifier_livraison' livraison.id %}" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-pen"></i> Modifier</a>
+          <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalAnnuler{{ livraison.id }}"><i class="fa-solid fa-xmark"></i> Annuler</button>
+        {% elif livraison.statut in 'attribuee,en_cours_ramassage,en_cours_livraison,deposee_relais' %}
+          <a href="{% url 'livraison:detail_livraison' livraison.id %}" class="btn btn-sm btn-primaire-cli"><i class="fa-solid fa-location-crosshairs"></i> Suivre</a>
+        {% elif livraison.statut == 'livree' %}
+          {% if livraison.evaluation %}
+            <a href="{% url 'livraison:detail_livraison' livraison.id %}#facture" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-receipt"></i> Facture</a>
+          {% else %}
+            <a href="{% url 'livraison:detail_livraison' livraison.id %}#evaluer" class="btn btn-sm btn-outline-warning"><i class="fa-solid fa-star"></i> Évaluer</a>
+            <a href="{% url 'livraison:detail_livraison' livraison.id %}#facture" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-receipt"></i> Facture</a>
+          {% endif %}
+        {% elif livraison.statut == 'annulee' %}
+          <a href="{% url 'livraison:creer_livraison' livraison.type_vehicule %}" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-rotate-right"></i> Recommander</a>
+        {% endif %}
+        <a href="{% url 'livraison:detail_livraison' livraison.id %}" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-eye"></i></a>
+      </div>
+    </div>
+    {% include 'paiement/_instructions_mobile.html' %}
+  </div>
+  {% endfor %}
+
+  {% for livraison in livraisons %}{% if livraison.statut == 'en_attente' %}{% include 'client/_modal_annulation.html' %}{% endif %}{% endfor %}
+
+{% else %}
+<div class="cli-card p-4 text-center text-muted">Aucune livraison ne correspond à ce filtre.</div>
+{% endif %}
+
+<style>
+  .livraison-card { background: #fff; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.06); padding: 1.2rem 1.4rem; margin-bottom: .9rem; transition: box-shadow .2s ease; }
+  .livraison-card:hover { box-shadow: 0 8px 20px rgba(0,0,0,.1); }
+  .livraison-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; flex-wrap: wrap; gap: .5rem; }
+  .livraison-hash { font-weight: 800; color: var(--primary); margin-right: .6rem; }
+  .livraison-type { color: #4b5563; font-weight: 600; font-size: .92rem; }
+  .livraison-route { color: #374151; font-size: .9rem; margin-bottom: .7rem; }
+  .livraison-bottom { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .6rem; }
+  .livraison-meta { display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: .84rem; }
+  .livraison-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+</style>
+{% endblock %}

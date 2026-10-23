@@ -1,0 +1,249 @@
+{% extends 'admin/base_admin.html' %}
+{% load livraison_extras %}
+{% block titre_admin %}Tableau de bord{% endblock %}
+{% block contenu_admin %}
+<h3 class="page-title mb-4">Tableau de bord</h3>
+
+<!-- ══ LIGNE 1 — STATISTIQUES PRINCIPALES ════════════════════════ -->
+<div class="row g-4 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#e8eaf6;color:#1a237e;"><i class="fa-solid fa-box"></i></div>
+      <div><p class="kpi-value">{{ stats.total_livraisons }}</p><p class="kpi-label">Total livraisons</p></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#fff3e0;color:#fd7e14;"><i class="fa-solid fa-hourglass-half"></i></div>
+      <div><p class="kpi-value">{{ stats.en_attente }}</p><p class="kpi-label">En attente</p></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#f0e9fa;color:#6f42c1;"><i class="fa-solid fa-arrows-rotate"></i></div>
+      <div><p class="kpi-value">{{ stats.en_cours }}</p><p class="kpi-label">En cours</p></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#e6f4ea;color:#198754;"><i class="fa-solid fa-circle-check"></i></div>
+      <div><p class="kpi-value">{{ stats.livrees }}</p><p class="kpi-label">Livrées</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LIGNE 2 — STATISTIQUES SECONDAIRES ════════════════════════ -->
+<div class="row g-4 mb-5">
+  <div class="col-12 col-md-4">
+    <div class="kpi-card kpi-card-sm">
+      <div class="kpi-icon" style="background:#e3f6fc;color:#0aa2c0;"><i class="fa-solid fa-users"></i></div>
+      <div><p class="kpi-value">{{ stats.total_clients }}</p><p class="kpi-label">Total clients</p></div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="kpi-card kpi-card-sm">
+      <div class="kpi-icon" style="background:#e6f4ea;color:#198754;"><i class="fa-solid fa-id-card-clip"></i></div>
+      <div><p class="kpi-value">{{ stats.livreurs_actifs }}</p><p class="kpi-label">Livreurs actifs</p></div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="kpi-card kpi-card-sm">
+      <div class="kpi-icon" style="background:#e3ecfb;color:#0d6efd;"><i class="fa-solid fa-car-side"></i></div>
+      <div><p class="kpi-value">{{ stats.vehicules_disponibles }}</p><p class="kpi-label">Véhicules disponibles</p></div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <a href="{% url 'livraison:liste_points_relais' %}" class="text-decoration-none">
+    <div class="kpi-card kpi-card-sm">
+      <div class="kpi-icon" style="background:#e8eaf6;color:#1a237e;"><i class="fa-solid fa-location-dot"></i></div>
+      <div><p class="kpi-value">{{ stats.total_points_relais }}</p><p class="kpi-label">Points relais</p></div>
+    </div>
+    </a>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="kpi-card kpi-card-sm">
+      <div class="kpi-icon" style="background:#e6f4ea;color:#198754;"><i class="fa-solid fa-store"></i></div>
+      <div><p class="kpi-value">{{ stats.points_relais_actifs }}</p><p class="kpi-label">Points relais actifs</p></div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="kpi-card kpi-card-sm">
+      <div class="kpi-icon" style="background:#fff3e0;color:#fd7e14;"><i class="fa-solid fa-boxes-stacked"></i></div>
+      <div><p class="kpi-value">{{ stats.colis_en_relais }}</p><p class="kpi-label">Colis en point relais</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAIEMENTS ══════════════════════════════════════════════════ -->
+<h5 class="fw-bold mb-3" style="color:#1f2330;"><i class="fa-solid fa-sack-dollar" style="color:#1a237e;"></i> Paiements</h5>
+<div class="row g-4 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card kpi-card-sm">
+      <div class="kpi-icon" style="background:#e8faf0;color:#00C853;"><i class="fa-solid fa-cash-register"></i></div>
+      <div><p class="kpi-value">{{ stats_paiements.encaisse_aujourdhui|fcfa }}</p><p class="kpi-label">Encaissé aujourd'hui</p></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card kpi-card-sm">
+      <div class="kpi-icon" style="background:#fff3e0;color:#fd7e14;"><i class="fa-solid fa-hourglass-half"></i></div>
+      <div><p class="kpi-value">{{ stats_paiements.en_attente }}</p><p class="kpi-label">Paiements en attente</p></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card kpi-card-sm">
+      <div class="kpi-icon" style="background:#e8faf0;color:#00a844;"><i class="fa-solid fa-money-bill-wave"></i></div>
+      <div><p class="kpi-value">{{ stats_paiements.especes }}</p><p class="kpi-label">Paiements en espèces</p></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card kpi-card-sm">
+      <div class="kpi-icon" style="background:#e8f1fe;color:#1877F2;"><i class="fa-solid fa-mobile-screen-button"></i></div>
+      <div><p class="kpi-value">{{ stats_paiements.mobile }}</p><p class="kpi-label">Paiements Mobile Money</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="card dash-card mb-5">
+  <div class="card-header admin-card-header">Paiements en attente</div>
+  <div class="card-body p-0">
+    {% if paiements_en_attente %}
+    <div class="table-responsive">
+      <table class="table table-hover-admin align-middle mb-0">
+        <thead><tr><th class="ps-4">#ID</th><th>Client</th><th>Montant</th><th>Mode</th><th>Livreur</th><th>Date</th><th>Statut</th><th class="text-end pe-4">Actions</th></tr></thead>
+        <tbody>
+          {% for livraison in paiements_en_attente %}
+          <tr>
+            <td class="ps-4">#{{ livraison.id }}</td>
+            <td>{{ livraison.client }}{% if livraison.payeur == 'destinataire' %}<br><small class="text-muted">payé par le destinataire</small>{% endif %}</td>
+            <td class="fw-semibold text-nowrap">{{ livraison.montant|fcfa }}</td>
+            <td class="small text-nowrap">{% include 'paiement/_mode.html' %}</td>
+            <td>{% if livraison.payeur == 'destinataire' and livraison.point_relais %}<small class="text-muted">Gérant — {{ livraison.point_relais.nom }}</small>{% else %}{{ livraison.livreur|default:"—" }}{% endif %}</td>
+            <td class="text-nowrap">{{ livraison.date_livraison|default:livraison.date_depot_relais|default:livraison.date_demande|date:"d/m/Y" }}</td>
+            <td class="small">{% include 'paiement/_badge_statut.html' %}<br><span class="text-muted">{{ livraison.get_statut_display }}</span></td>
+            <td class="text-end pe-4 text-nowrap">
+              <a href="{% url 'livraison:detail_livraison' livraison.id %}" class="btn btn-sm btn-outline-admin" title="Voir"><i class="fa-solid fa-eye"></i></a>
+              {% if livraison.statut_paiement == 'en_attente' %}
+              <form method="post" action="{% url 'livraison:marquer_paiement_en_retard' livraison.id %}" class="d-inline"
+                    onsubmit="return confirm('Marquer le paiement de la livraison #{{ livraison.id }} en retard ? Le client sera notifié.');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Marquer en retard"><i class="fa-solid fa-clock"></i> En retard</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted text-center py-5 mb-0">✅ Aucun paiement en attente</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ══ LIVRAISONS EN ATTENTE D'ATTRIBUTION ═══════════════════════ -->
+<div class="card dash-card">
+  <div class="card-header admin-card-header">Livraisons en attente d'attribution</div>
+  <div class="card-body p-0">
+    {% if attributions %}
+    <div class="table-responsive">
+      <table class="table table-hover-admin align-middle mb-0">
+        <thead><tr><th class="ps-4">#ID</th><th>Client</th><th>Type</th><th>Destination</th><th></th></tr></thead>
+        <tbody>
+          {% for item in attributions %}
+          <tr>
+            <td class="ps-4">#{{ item.livraison.id }}</td>
+            <td>{{ item.livraison.client }}</td>
+            <td>{{ item.livraison.get_type_vehicule_display }}</td>
+            <td>{{ item.livraison.ville_destination }}</td>
+            <td class="text-end pe-4">
+              <button type="button" class="btn btn-sm btn-admin" data-bs-toggle="modal" data-bs-target="#modalAttribuer{{ item.livraison.id }}">
+                <i class="fa-solid fa-user-plus"></i> Attribuer
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted text-center py-5 mb-0">✅ Aucune livraison en attente d'attribution</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── MODALES D'ATTRIBUTION ────────────────────────────────────── -->
+{% for item in attributions %}
+<div class="modal fade" id="modalAttribuer{{ item.livraison.id }}" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header admin-card-header">
+        <h5 class="modal-title">Attribuer la livraison #{{ item.livraison.id }} ({{ item.livraison.get_type_vehicule_display }})</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        {% if item.lignes %}
+        <div class="table-responsive mb-3">
+          <table class="table table-sm align-middle">
+            <thead><tr><th>Livreur</th><th>Véhicule</th><th>Capacité</th><th>Compatibilité</th></tr></thead>
+            <tbody>
+              {% for ligne in item.lignes %}
+              <tr>
+                <td>{{ ligne.livreur }}</td>
+                <td>
+                  {% if ligne.vehicule_type == 'moto' %}Moto
+                  {% elif ligne.vehicule_type == 'voiture' %}Voiture
+                  {% elif ligne.vehicule_type == 'les_deux' %}Moto et voiture
+                  {% else %}—{% endif %}
+                </td>
+                <td>{% if ligne.vehicule_type %}{{ ligne.capacite }} kg{% else %}—{% endif %}</td>
+                <td>
+                  {% if ligne.compatible %}<span class="text-success">✅ Compatible</span>
+                  {% else %}<span class="text-danger">❌ Incompatible</span>{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+
+        {% if item.compatibles %}
+        <form method="post" action="{% url 'livraison:attribuer_livreur' item.livraison.id %}" class="d-flex gap-2">
+          {% csrf_token %}
+          <select name="livreur_id" class="form-select" required>
+            <option value="">Choisir un livreur compatible</option>
+            {% for livreur in item.compatibles %}
+            <option value="{{ livreur.pk }}">{{ livreur }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-admin text-nowrap">Attribuer</button>
+        </form>
+        {% else %}
+        <p class="text-danger mb-0">
+          Aucun livreur disponible avec un véhicule adapté pour une livraison de type
+          {{ item.livraison.get_type_vehicule_display|lower }}.
+        </p>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<style>
+  .kpi-card { background: #fff; border: 1px solid #eceef3; border-radius: .75rem; padding: 1.5rem; display: flex; align-items: center; gap: 1.1rem; height: 100%; }
+  .kpi-card-sm { padding: 1.1rem 1.4rem; }
+  .kpi-icon { width: 52px; height: 52px; border-radius: .7rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+  .kpi-card-sm .kpi-icon { width: 42px; height: 42px; font-size: 1.05rem; }
+  .kpi-value { font-size: 1.75rem; font-weight: 700; margin: 0; line-height: 1.1; color: #1a237e; }
+  .kpi-card-sm .kpi-value { font-size: 1.35rem; }
+  .kpi-label { color: #6b7280; font-size: .85rem; margin: .2rem 0 0; }
+  .dash-card { border: 1px solid #eceef3; border-radius: .75rem; overflow: hidden; }
+  .dash-card .admin-card-header { padding: 1rem 1.5rem; }
+  .dash-card td, .dash-card th { padding-top: .9rem; padding-bottom: .9rem; }
+</style>
+{% endblock %}

@@ -1,0 +1,244 @@
+{% extends 'admin/base_admin.html' %}
+{% block titre_admin %}Véhicules{% endblock %}
+{% block contenu_admin %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="page-title mb-0">Véhicules</h3>
+  <button type="button" class="btn btn-admin" data-bs-toggle="modal" data-bs-target="#modalAjouterVehicule">
+    <i class="fa-solid fa-plus"></i> Ajouter un véhicule
+  </button>
+</div>
+
+<ul class="nav nav-tabs-admin mb-3">
+  <li class="nav-item"><a class="nav-link {% if onglet == 'tous' %}active{% endif %}" href="?onglet=tous">Tous <span class="badge bg-secondary ms-1">{{ compte_tous }}</span></a></li>
+  <li class="nav-item"><a class="nav-link {% if onglet == 'parking' %}active{% endif %}" href="?onglet=parking">Au parking <span class="badge bg-success ms-1">{{ compte_parking }}</span></a></li>
+  <li class="nav-item"><a class="nav-link {% if onglet == 'affectes' %}active{% endif %}" href="?onglet=affectes">Affectés <span class="badge bg-warning text-dark ms-1">{{ compte_affectes }}</span></a></li>
+  <li class="nav-item"><a class="nav-link {% if onglet == 'maintenance' %}active{% endif %}" href="?onglet=maintenance">En maintenance <span class="badge bg-danger ms-1">{{ compte_maintenance }}</span></a></li>
+</ul>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="d-flex gap-2" style="max-width:520px;">
+      <div class="input-group">
+        <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass"></i></span>
+        <input type="text" id="recherche_vehicules" class="form-control"
+               placeholder="Rechercher par immatriculation, marque, livreur...">
+      </div>
+      <button type="button" id="btn_reinitialiser_recherche" class="btn btn-outline-secondary text-nowrap">
+        Réinitialiser
+      </button>
+    </div>
+  </div>
+</div>
+
+{% if onglet == 'parking' and not livreurs_actifs_sans_vehicule %}
+<div class="alert alert-warning">
+  Aucun livreur actif sans véhicule pour le moment : le bouton <strong>Affecter</strong> reste désactivé
+  tant qu'aucun livreur éligible n'est disponible.
+</div>
+{% endif %}
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover-admin align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-3">Photo</th><th>Immatriculation</th><th>Type</th><th>Marque</th>
+            <th>Couleur</th><th>Capacité</th><th>Livreur affecté</th><th>État</th><th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="corps_tableau_vehicules">
+          {% include 'admin/_lignes_vehicules.html' %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODALES (hors du <table>) ────────────────────────────────── -->
+{% for vehicule in vehicules %}
+{% if vehicule.etat == 'disponible' %}
+<div class="modal fade" id="modalAffecter{{ vehicule.pk }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'livraison:affecter_vehicule' %}">
+      {% csrf_token %}
+      <input type="hidden" name="vehicule_id" value="{{ vehicule.pk }}">
+      <div class="modal-content">
+        <div class="modal-header admin-card-header">
+          <h5 class="modal-title">Affecter {{ vehicule.immatriculation }}</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          {% if vehicule.type_vehicule == 'moto' %}
+            {% with livreurs_compatibles=livreurs_moto %}
+            <label class="form-label">🏍️ Livreur avec permis moto (ou moto et voiture)</label>
+            {% if livreurs_compatibles %}
+              <select name="livreur_id" class="form-select" required>
+                <option value="">Choisir un livreur</option>
+                {% for livreur in livreurs_compatibles %}
+                <option value="{{ livreur.pk }}">
+                  {{ livreur }} (Permis {% if livreur.type_permis == 'les_deux' %}voiture et moto{% else %}{{ livreur.get_type_permis_display|lower }}{% endif %})
+                </option>
+                {% endfor %}
+              </select>
+            {% else %}
+              <p class="text-danger mb-0">Aucun livreur avec le permis requis disponible.</p>
+            {% endif %}
+            {% endwith %}
+          {% else %}
+            {% with livreurs_compatibles=livreurs_voiture %}
+            <label class="form-label">🚗 Livreur avec permis voiture (ou voiture et moto)</label>
+            {% if livreurs_compatibles %}
+              <select name="livreur_id" class="form-select" required>
+                <option value="">Choisir un livreur</option>
+                {% for livreur in livreurs_compatibles %}
+                <option value="{{ livreur.pk }}">
+                  {{ livreur }} (Permis {% if livreur.type_permis == 'les_deux' %}voiture et moto{% else %}{{ livreur.get_type_permis_display|lower }}{% endif %})
+                </option>
+                {% endfor %}
+              </select>
+            {% else %}
+              <p class="text-danger mb-0">Aucun livreur avec le permis requis disponible.</p>
+            {% endif %}
+            {% endwith %}
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-admin">Affecter</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% include 'admin/_modale_modifier_vehicule.html' %}
+{% endfor %}
+
+<!-- Modale ajout -->
+<div class="modal fade" id="modalAjouterVehicule" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'livraison:ajouter_vehicule' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header admin-card-header">
+          <h5 class="modal-title">Nouveau véhicule</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3 text-center">
+            <label for="photo_ajout" class="apercu-photo-label">
+              <img id="apercu_photo_ajout" class="apercu-photo d-none" alt="Aperçu">
+              <span id="apercu_photo_ajout_placeholder" class="apercu-photo-placeholder">
+                <i class="fa-solid fa-camera fs-3 d-block mb-1"></i>
+                Cliquez pour ajouter une photo
+              </span>
+            </label>
+            <input type="file" id="photo_ajout" name="photo" accept="image/jpeg,image/png,image/jpg" class="d-none"
+                   onchange="previsualiserPhoto(this, 'apercu_photo_ajout', 'apercu_photo_ajout_placeholder')">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Immatriculation</label>
+            <input type="text" name="immatriculation" class="form-control" required>
+          </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Type</label>
+              <select name="type_vehicule" class="form-select">
+                <option value="moto">Moto</option>
+                <option value="voiture">Voiture</option>
+              </select>
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label">Couleur</label>
+              <input type="text" name="couleur" class="form-control" list="liste_couleurs" placeholder="ex: Blanc">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Marque</label>
+              <input type="text" name="marque" class="form-control">
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label">Modèle</label>
+              <input type="text" name="modele" class="form-control">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Capacité de charge (kg)</label>
+            <input type="number" step="0.1" name="capacite_charge" class="form-control" value="0">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-admin">Ajouter</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<datalist id="liste_couleurs">
+  <option value="Blanc">
+  <option value="Noir">
+  <option value="Gris">
+  <option value="Rouge">
+  <option value="Bleu">
+  <option value="Vert">
+  <option value="Jaune">
+  <option value="Orange">
+</datalist>
+
+<style>
+  .apercu-photo-label { cursor: pointer; display: inline-block; }
+  .apercu-photo { width: 140px; height: 140px; object-fit: cover; border-radius: .6rem; border: 2px solid var(--primary); }
+  .apercu-photo-placeholder {
+    width: 140px; height: 140px; border-radius: .6rem; border: 2px dashed #c7cbe0; background: #f4f6fb;
+    color: #6b7280; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: .8rem; text-align: center; padding: .5rem;
+  }
+</style>
+
+<script>
+function previsualiserPhoto(input, idImg, idPlaceholder) {
+  const img = document.getElementById(idImg);
+  const placeholder = document.getElementById(idPlaceholder);
+  const fichier = input.files && input.files[0];
+  if (!fichier) return;
+  const lecteur = new FileReader();
+  lecteur.onload = function (e) {
+    img.src = e.target.result;
+    img.classList.remove('d-none');
+    placeholder.classList.add('d-none');
+  };
+  lecteur.readAsDataURL(fichier);
+}
+
+(function () {
+  const champRecherche = document.getElementById('recherche_vehicules');
+  const btnReinitialiser = document.getElementById('btn_reinitialiser_recherche');
+  const corpsTableau = document.getElementById('corps_tableau_vehicules');
+  const urlRecherche = "{% url 'livraison:recherche_vehicules' %}";
+  const ongletActif = "{{ onglet }}";
+  let minuteur = null;
+
+  function lancerRecherche() {
+    const q = champRecherche.value.trim();
+    fetch(`${urlRecherche}?onglet=${encodeURIComponent(ongletActif)}&q=${encodeURIComponent(q)}`)
+      .then(reponse => reponse.text())
+      .then(html => { corpsTableau.innerHTML = html; })
+      .catch(() => {});
+  }
+
+  champRecherche.addEventListener('input', function () {
+    clearTimeout(minuteur);
+    minuteur = setTimeout(lancerRecherche, 250);
+  });
+
+  btnReinitialiser.addEventListener('click', function () {
+    champRecherche.value = '';
+    lancerRecherche();
+  });
+})();
+</script>
+{% endblock %}

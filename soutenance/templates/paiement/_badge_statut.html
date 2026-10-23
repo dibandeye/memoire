@@ -1,0 +1,9 @@
+{% if livraison.statut_paiement == 'recu_especes' %}
+  <span class="badge rounded-pill" style="background:#e8faf0;color:#00873a;">✅ Paiement reçu en espèces</span>
+{% elif livraison.statut_paiement == 'confirme_mobile' %}
+  <span class="badge rounded-pill" style="background:{% if livraison.mode_paiement == 'wave' %}#e8f1fe;color:#1877F2{% else %}#fff0e6;color:#d45400{% endif %};">✅ Paiement confirmé ({{ livraison.get_mode_paiement_display }})</span>
+{% elif livraison.statut_paiement == 'en_retard' %}
+  <span class="badge rounded-pill" style="background:#fdeaea;color:#c62828;">❌ Paiement en retard</span>
+{% else %}
+  <span class="badge rounded-pill" style="background:#fff6e0;color:#a06200;">⏳ En attente de paiement</span>
+{% endif %}

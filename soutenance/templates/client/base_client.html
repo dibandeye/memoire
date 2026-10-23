@@ -1,0 +1,307 @@
+{% load livraison_extras %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block titre %}Tableau de bord{% endblock %} — LivraisonExpress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1a237e;
+    --secondary: #00b0ff;
+    --success: #00c853;
+    --warning: #ff6d00;
+    --danger: #d50000;
+    --primary-light: #e8eaf6;
+    --sidebar-w: 272px;
+    --header-h: 68px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #f4f6fb;
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    color: #212529;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────────────── */
+  .cli-header {
+    position: fixed; top: 0; left: 0; right: 0; height: var(--header-h);
+    background: #fff; border-bottom: 1px solid #eef0f4;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1.6rem; z-index: 1040; box-shadow: 0 2px 10px rgba(0,0,0,.04);
+    gap: 1rem;
+  }
+  .cli-header-left { display: flex; align-items: center; gap: .9rem; flex: 0 0 auto; }
+  .cli-burger { display: none; border: none; background: transparent; color: var(--primary); font-size: 1.3rem; padding: .25rem .4rem; }
+  .cli-logo { display: flex; align-items: center; gap: .6rem; text-decoration: none; color: var(--primary); font-weight: 800; font-size: 1.15rem; letter-spacing: -.02em; }
+  .cli-logo .logo-badge {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.05rem;
+  }
+
+  .cli-search { flex: 1 1 auto; max-width: 420px; margin: 0 auto; display: none; }
+  .cli-search form { position: relative; }
+  .cli-search input {
+    width: 100%; border: 1.5px solid #eef0f4; background: #f6f7fb; border-radius: 2rem;
+    padding: .6rem 1rem .6rem 2.6rem; font-size: .88rem; font-family: inherit;
+    transition: border-color .2s ease, background .2s ease;
+  }
+  .cli-search input:focus { outline: none; border-color: var(--secondary); background: #fff; }
+  .cli-search i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #9aa0b4; }
+
+  .cli-header-right { display: flex; align-items: center; gap: 1rem; flex: 0 0 auto; }
+  .btn-notif {
+    position: relative; border: none; background: #f4f6fb; color: #4b5563;
+    width: 42px; height: 42px; border-radius: 50%; font-size: 1.05rem;
+    display: flex; align-items: center; justify-content: center; transition: background .15s ease, color .15s ease;
+  }
+  .btn-notif:hover { background: var(--primary-light); color: var(--primary); }
+  .notif-badge {
+    position: absolute; top: -2px; right: -2px; background: var(--danger); color: #fff;
+    border-radius: 50%; font-size: .62rem; min-width: 17px; height: 17px; line-height: 17px;
+    text-align: center; font-weight: 700; padding: 0 3px;
+  }
+  .cli-notif-menu { width: 320px; padding: 0; overflow: hidden; }
+  .cli-notif-menu .notif-head { padding: .75rem 1rem; background: var(--primary); color: #fff; font-weight: 600; font-size: .9rem; display: flex; justify-content: space-between; align-items: center; }
+  .cli-notif-menu .notif-head a { color: #fff; font-size: .78rem; text-decoration: underline; }
+  .cli-notif-menu .notif-item { padding: .6rem 1rem; border-bottom: 1px solid #f1f1f1; white-space: normal; }
+  .cli-notif-menu .notif-item small { color: #9ca3af; }
+
+  .cli-user { display: flex; align-items: center; gap: .6rem; text-decoration: none; color: inherit; }
+  .cli-user-avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff; font-weight: 700; font-size: .85rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cli-user-name { font-weight: 600; color: #374151; font-size: .88rem; line-height: 1.1; }
+  .cli-user-role { font-size: .74rem; color: #9aa0b4; }
+
+  /* ── SIDEBAR (blanche) ──────────────────────────────────────── */
+  .cli-sidebar {
+    position: fixed; top: var(--header-h); left: 0; bottom: 0; width: var(--sidebar-w);
+    background: #fff; border-right: 1px solid #eef0f4; overflow-y: auto; z-index: 1035; transition: transform .25s ease;
+  }
+  .cli-sidebar-profil { padding: 1.7rem 1.3rem 1.2rem; text-align: center; border-bottom: 1px solid #f1f2f7; }
+  .cli-avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff; font-weight: 700; font-size: 1.5rem; display: flex; align-items: center;
+    justify-content: center; margin: 0 auto .7rem; box-shadow: 0 8px 20px rgba(26,35,126,.25);
+  }
+  .cli-nom { color: #1f2330; font-weight: 700; font-size: 1.02rem; margin-bottom: .15rem; }
+  .cli-email { color: #9aa0b4; font-size: .78rem; word-break: break-all; }
+
+  .cli-nav { padding: .8rem .7rem 1.5rem; }
+  .cli-nav-link {
+    display: flex; align-items: center; gap: .8rem; color: #4b5563;
+    padding: .7rem .9rem; text-decoration: none; font-size: .93rem; font-weight: 500;
+    border-radius: 12px; margin-bottom: .25rem; transition: background .15s ease, color .15s ease;
+  }
+  .cli-nav-link .nav-ico {
+    width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.02rem; flex-shrink: 0;
+  }
+  .cli-nav-link:hover { background: var(--primary-light); color: var(--primary); }
+  .cli-nav-link.active { background: var(--primary-light); color: var(--primary); font-weight: 700; }
+  .cli-nav-link.active .nav-ico { background: var(--primary); color: #fff; }
+  .cli-nav-badge { margin-left: auto; background: var(--danger); color: #fff; font-size: .68rem; font-weight: 700; border-radius: 1rem; padding: .1rem .45rem; }
+  .cli-nav-sep { border-top: 1px solid #f1f2f7; margin: .7rem .6rem; }
+  .cli-nav-link.deconnexion { color: var(--danger); }
+  .cli-nav-link.deconnexion:hover { background: #fdeaea; color: var(--danger); }
+  .cli-nav-link.deconnexion button {
+    background: none; border: none; color: inherit; font: inherit; padding: 0;
+    display: flex; align-items: center; gap: .8rem; width: 100%; text-align: left; cursor: pointer;
+  }
+
+  .ico-dashboard { background: #e3ecff; color: #1a237e; }
+  .ico-livraisons { background: #fff1e0; color: #fb8c00; }
+  .ico-nouvelle { background: #e4f5e4; color: #00c853; }
+  .ico-notifs { background: #efe4fb; color: #8e24aa; }
+  .ico-profil { background: #e0f7fa; color: #00838f; }
+
+  /* ── MAIN ───────────────────────────────────────────────────── */
+  .cli-main { margin-left: var(--sidebar-w); margin-top: var(--header-h); padding: 1.8rem 2rem 3rem; min-height: calc(100vh - var(--header-h)); }
+  .page-title { font-weight: 700; color: #1f2330; }
+  .cli-overlay { display: none; position: fixed; inset: var(--header-h) 0 0 0; background: rgba(0,0,0,.4); z-index: 1030; }
+
+  /* ── Composants partagés ───────────────────────────────────── */
+  .cli-card { border: none; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.06); transition: box-shadow .15s ease, transform .1s ease; background: #fff; }
+  .cli-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.09); }
+
+  .stat-card { border: none; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,.08); padding: 1.3rem 1.4rem; color: #fff; position: relative; overflow: hidden; transition: transform .2s ease, box-shadow .2s ease; }
+  .stat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 26px rgba(0,0,0,.14); }
+  .stat-card .stat-icon { font-size: 1.7rem; opacity: .9; }
+  .stat-card .stat-value { font-size: 1.7rem; font-weight: 800; line-height: 1.1; margin-top: .4rem; }
+  .stat-card .stat-label { font-size: .82rem; font-weight: 600; opacity: .9; }
+  .stat-total   { background: linear-gradient(135deg, #1a237e, #3949ab); }
+  .stat-attente { background: linear-gradient(135deg, #ff6d00, #ffa040); }
+  .stat-cours   { background: linear-gradient(135deg, #7b1fa2, #ab47bc); }
+  .stat-livree  { background: linear-gradient(135deg, #00c853, #66bb6a); }
+
+  .btn-primaire-cli { background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; color: #fff; font-weight: 600; transition: transform .15s ease, box-shadow .2s ease; }
+  .btn-primaire-cli:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,176,255,.35); }
+  .btn-danger-cli { background: var(--danger); border-color: var(--danger); color: #fff; transition: transform .1s ease, background .15s ease; }
+  .btn-danger-cli:hover { background: #a50000; border-color: #a50000; color: #fff; transform: translateY(-1px); }
+  .btn:active { transform: scale(.97); }
+
+  .badge-attente   { background: #eef0f4; color: #4b5563; }
+  .badge-attribuee { background: #fff1e0; color: #fb8c00; }
+  .badge-ramassage { background: #e3ecff; color: #1a237e; }
+  .badge-livraison { background: #e3ecff; color: #1a237e; }
+  .badge-livree    { background: #e4f5e4; color: #00c853; }
+  .badge-annulee   { background: #fdeaea; color: #d50000; }
+  .badge-probleme  { background: #fdeaea; color: #d50000; }
+  .badge-defaut    { background: #eef0f4; color: #4b5563; }
+  .badge-pill-statut { font-size: .78rem; font-weight: 700; padding: .35rem .75rem; border-radius: 2rem; display: inline-block; }
+
+  .pill-filtre {
+    border: 1.5px solid #e7e9f2; background: #fff; color: #4b5563; font-weight: 600; font-size: .85rem;
+    padding: .5rem 1.1rem; border-radius: 2rem; text-decoration: none; transition: all .2s ease;
+  }
+  .pill-filtre:hover { border-color: var(--secondary); color: var(--primary); }
+  .pill-filtre.active { background: linear-gradient(135deg, var(--primary), var(--secondary)); border-color: transparent; color: #fff; }
+
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in-up { opacity: 0; animation: fadeInUp .5s ease forwards; }
+
+  @media (min-width: 700px) { .cli-search { display: block; } }
+
+  @media (max-width: 900px) {
+    .cli-burger { display: inline-flex; align-items: center; }
+    .cli-sidebar { transform: translateX(-100%); }
+    .cli-sidebar.ouverte { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,.25); }
+    .cli-overlay.ouverte { display: block; }
+    .cli-main { margin-left: 0; padding: 1.25rem; }
+    .cli-logo span.logo-text { display: none; }
+    .cli-user-name, .cli-user-role { display: none; }
+  }
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<header class="cli-header">
+  <div class="cli-header-left">
+    <button class="cli-burger" type="button" id="btnBurger" aria-label="Ouvrir le menu">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+    <a class="cli-logo" href="{% url 'livraison:dashboard_client' %}">
+      <span class="logo-badge"><i class="fa-solid fa-truck-fast"></i></span>
+      <span class="logo-text">LivraisonExpress</span>
+    </a>
+  </div>
+
+  <div class="cli-search">
+    <form method="get" action="{% url 'livraison:mes_livraisons' %}">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" name="q" placeholder="Rechercher une livraison, une ville…">
+    </form>
+  </div>
+
+  <div class="cli-header-right">
+    {% with notifs=user.notifications.all %}
+    <div class="dropdown">
+      <button class="btn-notif" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fa-regular fa-bell"></i>
+        {% if notifs|length %}<span class="notif-badge">{{ notifs|length }}</span>{% endif %}
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end cli-notif-menu shadow">
+        <li class="notif-head">
+          <span>Notifications</span>
+          <a href="{% url 'livraison:notifications_client' %}">Tout voir</a>
+        </li>
+        {% for n in notifs|slice:":5" %}
+        <li class="notif-item">
+          <div class="fw-semibold">{{ n.titre }}</div>
+          <div class="small text-muted">{{ n.message }}</div>
+          <small>{{ n.date_envoi|date:"d/m/Y H:i" }}</small>
+        </li>
+        {% empty %}
+        <li class="notif-item text-muted text-center py-3">Aucune notification</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endwith %}
+
+    <a href="{% url 'livraison:profil_client' %}" class="cli-user">
+      <span class="cli-user-avatar">{{ user.prenom|slice:":1"|upper }}{{ user.nom|slice:":1"|upper }}</span>
+      <span>
+        <span class="cli-user-name d-block">{{ user.prenom }} {{ user.nom }}</span>
+        <span class="cli-user-role">Client</span>
+      </span>
+    </a>
+  </div>
+</header>
+
+<div class="cli-overlay" id="ovSidebar"></div>
+
+<aside class="cli-sidebar" id="sidebarClient">
+  <div class="cli-sidebar-profil">
+    <div class="cli-avatar">{{ user.prenom|slice:":1"|upper }}{{ user.nom|slice:":1"|upper }}</div>
+    <div class="cli-nom">{{ user.prenom }} {{ user.nom }}</div>
+    <div class="cli-email">{{ user.email }}</div>
+  </div>
+
+  <nav class="cli-nav">
+    <a class="cli-nav-link {% if section == 'dashboard' %}active{% endif %}" href="{% url 'livraison:dashboard_client' %}">
+      <span class="nav-ico ico-dashboard">🏠</span> <span>Tableau de bord</span>
+    </a>
+    <a class="cli-nav-link {% if section == 'mes_livraisons' %}active{% endif %}" href="{% url 'livraison:mes_livraisons' %}">
+      <span class="nav-ico ico-livraisons">📦</span> <span>Mes livraisons</span>
+    </a>
+    <a class="cli-nav-link {% if section == 'creer_livraison' %}active{% endif %}" href="{% url 'livraison:choisir_vehicule' %}">
+      <span class="nav-ico ico-nouvelle">➕</span> <span>Nouvelle livraison</span>
+    </a>
+    <a class="cli-nav-link {% if section == 'notifications' %}active{% endif %}" href="{% url 'livraison:notifications_client' %}">
+      <span class="nav-ico ico-notifs">🔔</span> <span>Notifications</span>
+      {% if nb_notifs_non_lues %}<span class="cli-nav-badge">{{ nb_notifs_non_lues }}</span>{% endif %}
+    </a>
+    <a class="cli-nav-link {% if section == 'profil' %}active{% endif %}" href="{% url 'livraison:profil_client' %}">
+      <span class="nav-ico ico-profil">👤</span> <span>Mon profil</span>
+    </a>
+
+    <div class="cli-nav-sep"></div>
+
+    <div class="cli-nav-link deconnexion">
+      <form method="post" action="{% url 'livraison:deconnexion' %}">
+        {% csrf_token %}
+        <button type="submit"><span class="nav-ico" style="background:#fdeaea;">🚪</span> <span>Déconnexion</span></button>
+      </form>
+    </div>
+  </nav>
+</aside>
+
+<main class="cli-main">
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    </div>
+  {% endfor %}
+  {% block contenu %}{% endblock %}
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+  const burger = document.getElementById('btnBurger');
+  const sidebar = document.getElementById('sidebarClient');
+  const overlay = document.getElementById('ovSidebar');
+  function fermer() { sidebar.classList.remove('ouverte'); overlay.classList.remove('ouverte'); }
+  burger.addEventListener('click', function () {
+    sidebar.classList.toggle('ouverte');
+    overlay.classList.toggle('ouverte');
+  });
+  overlay.addEventListener('click', fermer);
+})();
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

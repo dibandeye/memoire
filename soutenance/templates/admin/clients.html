@@ -1,0 +1,59 @@
+{% extends 'admin/base_admin.html' %}
+{% block titre_admin %}Clients{% endblock %}
+{% block contenu_admin %}
+<h3 class="page-title">Clients</h3>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <form method="get" class="d-flex gap-2" style="max-width:420px;">
+      <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Rechercher un client...">
+      <button type="submit" class="btn btn-admin text-nowrap"><i class="fa-solid fa-magnifying-glass"></i></button>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover-admin align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-3">Nom</th><th>Email</th><th>Téléphone</th><th>Ville</th>
+            <th>Nb livraisons</th><th>Statut</th><th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for client in clients %}
+          <tr>
+            <td class="ps-3">{{ client.utilisateur.prenom }} {{ client.utilisateur.nom }}</td>
+            <td>{{ client.utilisateur.email }}</td>
+            <td>{{ client.utilisateur.telephone|default:"—" }}</td>
+            <td>{{ client.ville|default:"—" }}</td>
+            <td>{{ client.nb_livraisons }}</td>
+            <td>{% include 'admin/_badge_compte.html' with utilisateur=client.utilisateur %}</td>
+            <td class="text-end pe-3 text-nowrap">
+              <a href="{% url 'livraison:detail_utilisateur' client.utilisateur.pk %}" class="btn btn-sm btn-outline-admin" title="Voir"><i class="fa-solid fa-eye"></i></a>
+              {% if client.utilisateur.est_actif %}
+              <form method="post" action="{% url 'livraison:desactiver_compte' client.utilisateur.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-sm btn-outline-warning" title="Désactiver"><i class="fa-solid fa-ban"></i></button>
+              </form>
+              {% else %}
+              <form method="post" action="{% url 'livraison:activer_compte' client.utilisateur.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-sm btn-outline-success" title="Activer"><i class="fa-solid fa-check"></i></button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">Aucun client trouvé.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

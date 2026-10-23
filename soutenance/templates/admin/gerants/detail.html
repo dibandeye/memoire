@@ -1,0 +1,109 @@
+{% extends 'admin/base_admin.html' %}
+{% block titre_admin %}{{ gerant.prenom }} {{ gerant.nom }}{% endblock %}
+{% block contenu_admin %}
+<nav class="small mb-2"><a href="{% url 'livraison:liste_gerants' %}" class="text-decoration-none" style="color:#1a237e;"><i class="fa-solid fa-arrow-left"></i> Gérants</a></nav>
+
+<!-- ══ SECTION 1 — PROFIL ════════════════════════════════════════ -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex flex-column flex-md-row align-items-center align-items-md-start gap-4">
+      <span class="avatar-initiales avatar-lg" style="background:{{ gerant.couleur_avatar }};">{{ gerant.prenom|slice:":1" }}{{ gerant.nom|slice:":1" }}</span>
+      <div class="flex-grow-1 text-center text-md-start">
+        <h3 class="fw-bold mb-1" style="color:#1f2330;">{{ gerant.prenom }} {{ gerant.nom }}</h3>
+        <p class="mb-2">
+          {% if gerant.est_actif %}<span class="badge bg-success">Actif</span>{% else %}<span class="badge bg-danger">Inactif</span>{% endif %}
+          <span class="badge" style="background:#e8eaf6;color:#1a237e;"><i class="fa-solid fa-user-tie"></i> Gérant de point relais</span>
+        </p>
+        <div class="text-muted small">
+          <span class="me-3 d-inline-block"><i class="fa-solid fa-envelope"></i> {{ gerant.email }}</span>
+          <span class="me-3 d-inline-block"><i class="fa-solid fa-phone"></i> {{ gerant.telephone|default:"—" }}</span>
+          <span class="d-inline-block"><i class="fa-regular fa-calendar"></i> Créé le {{ gerant.date_creation|date:"d/m/Y" }}</span>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap justify-content-center gap-2">
+        <a href="{% url 'livraison:modifier_gerant' gerant.pk %}" class="btn btn-outline-admin"><i class="fa-solid fa-pen"></i> Modifier</a>
+        <form method="post" action="{% url 'livraison:activer_desactiver_gerant' gerant.pk %}" class="m-0">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          {% if gerant.est_actif %}
+          <button type="submit" class="btn btn-outline-warning"><i class="fa-solid fa-ban"></i> Désactiver</button>
+          {% else %}
+          <button type="submit" class="btn btn-outline-success"><i class="fa-solid fa-check"></i> Activer</button>
+          {% endif %}
+        </form>
+        <form method="post" action="{% url 'livraison:supprimer_gerant' gerant.pk %}" class="m-0"
+              onsubmit="return confirm('Supprimer définitivement ce compte gérant ?');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-danger" {% if points_relais_geres %}disabled title="Retirez-le d'abord de ses points relais"{% endif %}><i class="fa-solid fa-trash"></i> Supprimer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- ══ SECTION 2 — POINTS RELAIS GÉRÉS ═════════════════════════ -->
+  <div class="col-lg-8">
+    <div class="card shadow-sm h-100">
+      <div class="card-header admin-card-header"><i class="fa-solid fa-location-dot"></i> Points relais gérés ({{ points_relais_geres|length }})</div>
+      <div class="card-body {% if points_relais_geres %}p-0{% endif %}">
+        {% if points_relais_geres %}
+        <div class="table-responsive">
+          <table class="table table-hover-admin align-middle mb-0">
+            <thead><tr><th class="ps-3">Nom du point relais</th><th>Ville</th><th>Colis en attente</th><th class="text-end pe-3">Actions</th></tr></thead>
+            <tbody>
+              {% for affectation in points_relais_geres %}
+              <tr>
+                <td class="ps-3">
+                  <a href="{% url 'livraison:detail_point_relais' affectation.point_relais_id %}" class="fw-semibold text-decoration-none" style="color:#1a237e;">{{ affectation.point_relais.nom }}</a>
+                  {% if not affectation.point_relais.est_actif %}<span class="badge bg-danger ms-1">Inactif</span>{% endif %}
+                  <div class="small text-muted">Depuis le {{ affectation.date_affectation|date:"d/m/Y" }}</div>
+                </td>
+                <td>{{ affectation.point_relais.ville }}</td>
+                <td>
+                  {% if affectation.nb_colis %}<span class="badge rounded-pill bg-primary"><i class="fa-solid fa-box"></i> {{ affectation.nb_colis }}</span>{% else %}<span class="text-muted">0</span>{% endif %}
+                </td>
+                <td class="text-end pe-3">
+                  <form method="post" action="{% url 'livraison:retirer_gerant_point_relais' gerant.pk affectation.point_relais_id %}" class="m-0"
+                        onsubmit="return confirm('Retirer {{ gerant.prenom|escapejs }} de {{ affectation.point_relais.nom|escapejs }} ?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger text-nowrap"><i class="fa-solid fa-xmark"></i> Retirer</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="alert alert-warning mb-0"><i class="fa-solid fa-triangle-exclamation"></i> Ce gérant n'est affecté à aucun point relais.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 3 — AFFECTER ════════════════════════════════════ -->
+  <div class="col-lg-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header admin-card-header"><i class="fa-solid fa-plus"></i> Affecter à un point relais</div>
+      <div class="card-body">
+        {% if points_relais_disponibles %}
+        <form method="post" action="{% url 'livraison:affecter_gerant_point_relais' gerant.pk %}">
+          {% csrf_token %}
+          <label for="point_relais_id" class="form-label small fw-semibold">Point relais</label>
+          <select id="point_relais_id" name="point_relais_id" class="form-select mb-3" required>
+            <option value="">Choisir un point relais...</option>
+            {% for pr in points_relais_disponibles %}
+            <option value="{{ pr.pk }}">{{ pr.nom }} — {{ pr.ville }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-admin w-100"><i class="fa-solid fa-plus"></i> Affecter</button>
+        </form>
+        {% else %}
+        <div class="alert alert-success mb-0"><i class="fa-solid fa-circle-check"></i> Ce gérant est affecté à tous les points relais actifs.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

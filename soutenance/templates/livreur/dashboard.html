@@ -1,0 +1,249 @@
+{% extends 'livreur/base_livreur.html' %}
+{% load livraison_extras %}
+{% block titre %}Tableau de bord{% endblock %}
+{% block contenu %}
+<h3 class="page-title mb-4">Tableau de bord</h3>
+
+<!-- ── STATISTIQUES ─────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-bleu">
+      <div class="stat-icon"><i class="fa-solid fa-box"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-label">Total missions</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-orange">
+      <div class="stat-icon"><i class="fa-solid fa-arrows-rotate"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.en_cours }}</div>
+        <div class="stat-label">En cours</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-vert">
+      <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.livrees }}</div>
+        <div class="stat-label">Livrées</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-violet">
+      <div class="stat-icon"><i class="fa-solid fa-star"></i></div>
+      <div>
+        <div class="stat-value">{{ livreur.note_moyenne|floatformat:1 }}</div>
+        <div class="stat-label">Note moyenne</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="missions"></div>
+
+<!-- ── MISSION EN COURS ─────────────────────────────────────────── -->
+{% if mission_en_cours %}
+<div class="mission-en-cours-card mb-4">
+  <div class="mission-en-cours-header">
+    <i class="fa-solid fa-arrows-rotate fa-spin"></i> MISSION EN COURS #{{ mission_en_cours.id }}
+  </div>
+  <div class="mission-en-cours-body">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="info-ligne"><i class="fa-solid fa-user text-muted mt-1"></i> <span><strong>Client :</strong> {{ mission_en_cours.client }}</span></div>
+        <div class="info-ligne"><i class="fa-solid fa-location-dot text-muted mt-1"></i> <span><strong>Départ :</strong> {{ mission_en_cours.adresse_depart }}, {{ mission_en_cours.ville_depart }}</span></div>
+        <div class="info-ligne"><i class="fa-solid fa-flag-checkered text-muted mt-1"></i> <span><strong>Destination :</strong> {{ mission_en_cours.adresse_destination }}, {{ mission_en_cours.ville_destination }}</span></div>
+      </div>
+      <div class="col-md-6">
+        <div class="info-ligne"><i class="fa-solid fa-box text-muted mt-1"></i> <span><strong>Type :</strong> {{ mission_en_cours.get_type_vehicule_display }}</span></div>
+        <div class="info-ligne"><i class="fa-solid fa-phone text-muted mt-1"></i> <span><strong>Destinataire :</strong> {{ mission_en_cours.nom_destinataire }} — {{ mission_en_cours.tel_destinataire }}</span></div>
+        <div class="info-ligne"><i class="fa-solid fa-circle-info text-muted mt-1"></i> <span><strong>Statut :</strong> {{ mission_en_cours.get_statut_display }}</span></div>
+      </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mt-3">
+      {% if mission_en_cours.statut == 'en_cours_ramassage' %}
+      <form method="post" action="{% url 'livraison:maj_statut_livraison' mission_en_cours.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="statut" value="en_cours_livraison">
+        <input type="hidden" name="next" value="{% url 'livraison:dashboard_livreur' %}">
+        <button type="submit" class="btn btn-primaire-liv"><i class="fa-solid fa-location-dot"></i> Colis récupéré</button>
+      </form>
+      {% elif mission_en_cours.statut == 'en_cours_livraison' and mission_en_cours.type_livraison == 'point_relais' %}
+      <form method="post" action="{% url 'livraison:maj_statut_livraison' mission_en_cours.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="statut" value="deposee_relais">
+        <input type="hidden" name="next" value="{% url 'livraison:dashboard_livreur' %}">
+        <button type="submit" class="btn btn-succes-liv"><i class="fa-solid fa-store"></i> Déposé au point relais</button>
+      </form>
+      {% elif mission_en_cours.statut == 'en_cours_livraison' %}
+      <form method="post" action="{% url 'livraison:maj_statut_livraison' mission_en_cours.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="statut" value="livree">
+        <input type="hidden" name="next" value="{% url 'livraison:dashboard_livreur' %}">
+        <button type="submit" class="btn btn-succes-liv"><i class="fa-solid fa-circle-check"></i> Marquer comme livrée</button>
+      </form>
+      {% endif %}
+
+      {% if mission_en_cours.statut in statuts_annulables %}
+      <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalAnnuler{{ mission_en_cours.id }}">
+        <i class="fa-solid fa-xmark"></i> Annuler
+      </button>
+      {% else %}
+      <button type="button" class="btn btn-outline-danger" disabled title="Impossible d'annuler, le colis est déjà en route">
+        <i class="fa-solid fa-xmark"></i> Annuler
+      </button>
+      {% endif %}
+
+      <a href="{% url 'livraison:detail_livraison' mission_en_cours.id %}" class="btn btn-outline-secondary">
+        <i class="fa-solid fa-comment"></i> Détails / Messages
+      </a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── MISSIONS ASSIGNÉES EN ATTENTE ────────────────────────────── -->
+<h5 class="mb-3">Missions assignées en attente</h5>
+{% if missions_attribuees %}
+{% for mission in missions_attribuees %}
+<div class="mission-card">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+      <span class="mission-num">#{{ mission.id }}</span>
+      <i class="fa-solid fa-box text-muted ms-2"></i> {{ mission.get_type_vehicule_display }}
+      <span class="badge badge-pill-statut {{ mission.statut|classe_badge_statut }} ms-2">⏳ {{ mission.get_statut_display }}</span>
+    </div>
+    <div class="text-muted small">Date : {{ mission.date_demande|date:"d/m/Y" }}</div>
+  </div>
+  <div class="mt-2 small text-muted">
+    De : <strong class="text-dark">{{ mission.ville_depart }}</strong> → Vers : <strong class="text-dark">{{ mission.ville_destination }}</strong>
+  </div>
+  <div class="small text-muted">Client : {{ mission.client }}</div>
+
+  <div class="d-flex flex-wrap gap-2 mt-3">
+    <form method="post" action="{% url 'livraison:maj_statut_livraison' mission.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="statut" value="en_cours_ramassage">
+      <input type="hidden" name="next" value="{% url 'livraison:dashboard_livreur' %}">
+      <button type="submit" class="btn btn-sm btn-primaire-liv"><i class="fa-solid fa-play"></i> Démarrer</button>
+    </form>
+    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalAnnuler{{ mission.id }}">
+      <i class="fa-solid fa-xmark"></i> Annuler
+    </button>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<p class="text-muted">Aucune mission en attente de démarrage.</p>
+{% endif %}
+
+<!-- ── MODALES D'ANNULATION (mission en cours + missions attribuées) ── -->
+{% for livraison in missions_attribuees %}{% include 'livreur/_modal_annulation.html' %}{% endfor %}
+{% if mission_en_cours %}{% with livraison=mission_en_cours %}{% include 'livreur/_modal_annulation.html' %}{% endwith %}{% endif %}
+
+<!-- ── PAIEMENTS À CONFIRMER ─────────────────────────────────────── -->
+{% if paiements_a_confirmer %}
+<h5 class="mt-5 mb-3">💰 Paiements à confirmer <span class="badge bg-warning text-dark align-middle">{{ paiements_a_confirmer|length }}</span></h5>
+<div class="row g-3">
+  {% for livraison in paiements_a_confirmer %}
+  <div class="col-12 col-lg-6">
+    <div class="paiement-card paiement-{{ livraison.mode_paiement }}">
+      <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+        <div class="fw-bold"><i class="fa-solid fa-sack-dollar"></i> Paiement en attente — #{{ livraison.id }}</div>
+        {% include 'paiement/_badge_statut.html' %}
+      </div>
+      <div class="small mb-1">Client : <strong>{{ livraison.client }}</strong> · {{ livraison.get_statut_display }}</div>
+      <div class="small mb-1">Mode : {% include 'paiement/_mode.html' %}</div>
+      <div class="small mb-3">Montant : <strong class="fs-6">{{ livraison.montant|fcfa }}</strong></div>
+
+      {% if livraison.mode_paiement == 'especes' %}
+      <form method="post" action="{% url 'livraison:confirmer_paiement_especes' livraison.id %}"
+            onsubmit="return confirm('Confirmez-vous avoir reçu {{ livraison.montant|fcfa }} en espèces ?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-succes-liv w-100"><i class="fa-solid fa-check"></i> J'ai reçu l'argent</button>
+      </form>
+      {% else %}
+      <form method="post" action="{% url 'livraison:confirmer_paiement_mobile' livraison.id %}">
+        {% csrf_token %}
+        <label class="form-label small fw-semibold mb-1" for="ref{{ livraison.id }}">Référence de la transaction {{ livraison.get_mode_paiement_display }}</label>
+        <div class="input-group">
+          <input type="text" id="ref{{ livraison.id }}" name="reference_paiement" class="form-control" maxlength="100" required placeholder="Ex : {{ livraison.reference_attendue }} / ID transaction">
+          <button type="submit" class="btn btn-succes-liv text-nowrap"><i class="fa-solid fa-check"></i> Confirmer le paiement</button>
+        </div>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<style>
+  .paiement-card { background: #fff; border-radius: .8rem; box-shadow: 0 2px 10px rgba(0,0,0,.06); padding: 1.1rem 1.3rem; border-left: 5px solid #00C853; height: 100%; }
+  .paiement-card.paiement-wave { border-left-color: #1877F2; }
+  .paiement-card.paiement-orange_money { border-left-color: #FF6600; }
+</style>
+{% endif %}
+
+<!-- ── HISTORIQUE ────────────────────────────────────────────────── -->
+<h5 class="mt-5 mb-3">Historique des missions</h5>
+{% if page_obj %}
+<div class="table-responsive liv-card">
+  <table class="table table-hover align-middle mb-0">
+    <thead class="table-light">
+      <tr>
+        <th>#</th><th>Type</th><th>Départ</th><th>Destination</th><th>Date</th><th>Statut</th><th class="text-end">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for mission in page_obj %}
+      <tr>
+        <td>{{ mission.id }}</td>
+        <td>{{ mission.get_type_vehicule_display }}</td>
+        <td>{{ mission.ville_depart }}</td>
+        <td>{{ mission.ville_destination }}</td>
+        <td>{{ mission.date_demande|date:"d/m/Y" }}</td>
+        <td><span class="badge badge-pill-statut {{ mission.statut|classe_badge_statut }}">{{ mission.get_statut_display }}</span></td>
+        <td class="text-end">
+          <a href="{% url 'livraison:detail_livraison' mission.id %}" class="btn btn-sm btn-outline-primary">Détails</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav class="mt-3">
+  <ul class="pagination justify-content-center">
+    <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+      <a class="page-link" href="?page={{ page_obj.previous_page_number }}#historique">Précédent</a>
+    </li>
+    {% for num in page_obj.paginator.page_range %}
+      <li class="page-item {% if num == page_obj.number %}active{% endif %}"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+    {% endfor %}
+    <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+      <a class="page-link" href="?page={{ page_obj.next_page_number }}#historique">Suivant</a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+{% else %}
+<p class="text-muted">Aucun historique pour le moment.</p>
+{% endif %}
+
+<script>
+function basculerAvertissementAnnulation(livraisonId) {
+  const motifCoche = document.querySelector(`input[name="motif"][id^="motif_"][id$="_${livraisonId}"]:checked`);
+  const avertissement = document.getElementById(`avertissement_disponibilite_${livraisonId}`);
+  if (!avertissement) return;
+  const motifsSensibles = ['urgence', 'arrestation'];
+  const afficher = motifCoche && motifsSensibles.includes(motifCoche.value);
+  avertissement.classList.toggle('d-none', !afficher);
+}
+</script>
+{% endblock %}

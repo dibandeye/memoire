@@ -1,0 +1,61 @@
+{% extends 'admin/base_admin.html' %}
+{% block titre_admin %}{{ vehicule.immatriculation }}{% endblock %}
+{% block contenu_admin %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h3 class="mb-0">{{ vehicule.get_type_vehicule_display }} — {{ vehicule.immatriculation }}</h3>
+  <a href="{% url 'livraison:liste_vehicules_admin' %}" class="btn btn-outline-admin">← Retour aux véhicules</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-4 text-center">
+    {% if vehicule.photo %}
+      <img src="{{ vehicule.photo.url }}" alt="{{ vehicule.immatriculation }}" class="img-fluid rounded shadow-sm" style="max-height:320px;object-fit:cover;">
+    {% else %}
+      <div class="d-flex align-items-center justify-content-center rounded shadow-sm"
+           style="height:260px;background:#e8eaf6;font-size:5rem;">
+        {% if vehicule.type_vehicule == 'moto' %}🏍️{% else %}🚗{% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="col-md-8">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header admin-card-header">Informations générales</div>
+      <div class="card-body p-4">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Immatriculation</dt>
+          <dd class="col-sm-8">{{ vehicule.immatriculation }}</dd>
+
+          <dt class="col-sm-4">Type</dt>
+          <dd class="col-sm-8">{{ vehicule.get_type_vehicule_display }}</dd>
+
+          <dt class="col-sm-4">Marque / Modèle</dt>
+          <dd class="col-sm-8">{{ vehicule.marque|default:"—" }} {{ vehicule.modele }}</dd>
+
+          <dt class="col-sm-4">Couleur</dt>
+          <dd class="col-sm-8">
+            {% if vehicule.couleur %}
+              <span class="couleur-pastille couleur-{{ vehicule.couleur|lower }}"></span> {{ vehicule.couleur }}
+            {% else %}—{% endif %}
+          </dd>
+
+          <dt class="col-sm-4">Capacité de charge</dt>
+          <dd class="col-sm-8">{{ vehicule.capacite_charge }} kg</dd>
+
+          <dt class="col-sm-4">État</dt>
+          <dd class="col-sm-8">{% include 'admin/_badge_vehicule.html' %}</dd>
+
+          <dt class="col-sm-4">Livreur affecté</dt>
+          <dd class="col-sm-8">
+            {% if vehicule.livreur %}
+              <a href="{% url 'livraison:detail_utilisateur' vehicule.livreur.utilisateur.pk %}">{{ vehicule.livreur }}</a>
+            {% else %}
+              <span class="text-muted">Aucun</span>
+            {% endif %}
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

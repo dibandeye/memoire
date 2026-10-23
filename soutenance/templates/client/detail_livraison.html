@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+{% block titre %}Livraison #{{ livraison.id }}{% endblock %}
+{% block contenu %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --primary: #1a237e; --secondary: #00b0ff; --success: #00c853; --warning: #ff6d00; --danger: #d50000;
+  }
+  #detailLivraison, #detailLivraison * { font-family: 'Poppins', 'Segoe UI', Arial, sans-serif; }
+  #detailLivraison .dl-card { border: none; border-radius: 18px; box-shadow: 0 4px 18px rgba(0,0,0,.07); }
+
+  .dl-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: .8rem; margin-bottom: 1.2rem; }
+  .dl-status-badge { font-size: 1rem; font-weight: 700; padding: .5rem 1.2rem; border-radius: 2rem; }
+  .badge-defaut, .badge-attente { background: #eef0f4; color: #4b5563; }
+  .badge-attribuee { background: #fff1e0; color: #fb8c00; }
+  .badge-ramassage, .badge-livraison { background: #e3ecff; color: #1a237e; }
+  .badge-livree { background: #e4f5e4; color: #00c853; }
+  .badge-annulee, .badge-probleme { background: #fdeaea; color: #d50000; }
+
+  /* Timeline */
+  .dl-timeline { display: flex; align-items: center; margin: 1.6rem 0 2rem; }
+  .dl-tl-node { display: flex; flex-direction: column; align-items: center; gap: .5rem; width: 90px; flex-shrink: 0; }
+  .dl-tl-dot { width: 34px; height: 34px; border-radius: 50%; background: #eef0f7; color: #9aa0b4; display: flex; align-items: center; justify-content: center; font-size: .9rem; border: 2px solid #eef0f7; }
+  .dl-tl-label { font-size: .72rem; font-weight: 600; color: #9aa0b4; text-align: center; }
+  .dl-tl-line { flex: 1 1 auto; height: 3px; background: #eef0f7; margin: 0 -4px 22px; border-radius: 2px; }
+  .dl-tl-node.done .dl-tl-dot { background: var(--success); border-color: var(--success); color: #fff; }
+  .dl-tl-node.done .dl-tl-label { color: var(--success); font-weight: 700; }
+  .dl-tl-node.done + .dl-tl-line { background: var(--success); }
+  .dl-tl-node.active .dl-tl-dot { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 0 0 5px rgba(26,35,126,.15); }
+  .dl-tl-node.active .dl-tl-label { color: var(--primary); font-weight: 700; }
+
+  .dl-alert-cancel { background: #fdeaea; color: var(--danger); border-radius: 14px; padding: 1rem 1.2rem; font-weight: 600; margin-bottom: 1.4rem; }
+
+  dl.dl-info { row-gap: .5rem; }
+  #detailLivraison dt { color: #8a8fa3; font-weight: 600; font-size: .85rem; }
+  #detailLivraison dd { font-weight: 500; color: #1f2330; }
+
+  /* Livreur card */
+  .dl-livreur-card { border-radius: 16px; background: linear-gradient(135deg, rgba(26,35,126,.05), rgba(0,176,255,.05)); padding: 1.3rem 1.4rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  .dl-livreur-avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+  .dl-livreur-name { font-weight: 700; color: #1f2330; }
+  .dl-livreur-stars { color: #ffb400; font-size: .95rem; }
+  .dl-livreur-actions { margin-left: auto; display: flex; gap: .5rem; }
+
+  /* Chat */
+  .dl-chat-box { max-height: 340px; overflow-y: auto; padding: .5rem; background: #f6f7fb; border-radius: 14px; }
+  .dl-msg-row { display: flex; margin-bottom: .6rem; }
+  .dl-msg-row.mine { justify-content: flex-end; }
+  .dl-bubble { max-width: 78%; padding: .55rem .9rem; border-radius: 16px; font-size: .88rem; }
+  .dl-msg-row.mine .dl-bubble { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; border-bottom-right-radius: 4px; }
+  .dl-msg-row:not(.mine) .dl-bubble { background: #fff; color: #1f2330; border: 1px solid #eef0f4; border-bottom-left-radius: 4px; }
+  .dl-bubble small { display: block; opacity: .75; font-size: .68rem; margin-bottom: .15rem; }
+
+  .btn-primaire-dl { background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; color: #fff; font-weight: 600; }
+  .btn-primaire-dl:hover { color: #fff; opacity: .92; }
+  .btn-danger-dl { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .btn-danger-dl:hover { background: #a50000; border-color: #a50000; color: #fff; }
+
+  .dl-facture-box { border-radius: 14px; background: #f6f7fb; padding: 1rem 1.2rem; }
+</style>
+
+<div id="detailLivraison">
+<div class="row">
+  <div class="col-md-7">
+    <div class="dl-card p-4 mb-4">
+      <div class="dl-header">
+        <h4 class="mb-0">Livraison #{{ livraison.id }}</h4>
+        <span class="dl-status-badge {% if livraison.statut == 'en_attente' %}badge-attente{% elif livraison.statut == 'attribuee' %}badge-attribuee{% elif livraison.statut == 'en_cours_ramassage' or livraison.statut == 'en_cours_livraison' or livraison.statut == 'deposee_relais' %}badge-ramassage{% elif livraison.statut == 'livree' %}badge-livree{% else %}badge-annulee{% endif %}">
+          {{ livraison.get_statut_display }}
+        </span>
+      </div>
+
+      {% if livraison.statut == 'annulee' or livraison.statut == 'probleme' %}
+        <div class="dl-alert-cancel">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          {% if livraison.statut == 'annulee' %}Cette livraison a été annulée.{% else %}Un problème a été signalé sur cette livraison.{% endif %}
+          {% if livraison.motif_annulation %}<div class="small fw-normal mt-1">Motif : {{ livraison.motif_annulation }}</div>{% endif %}
+        </div>
+      {% else %}
+        <!-- ── TIMELINE ─────────────────────────────────────────── -->
+        <div class="dl-timeline">
+          <div class="dl-tl-node {% if livraison.statut != 'en_attente' %}done{% else %}active{% endif %}">
+            <div class="dl-tl-dot"><i class="fa-solid fa-check"></i></div>
+            <div class="dl-tl-label">En attente</div>
+          </div>
+          <div class="dl-tl-line"></div>
+          <div class="dl-tl-node {% if livraison.statut == 'en_cours_ramassage' or livraison.statut == 'en_cours_livraison' or livraison.statut == 'deposee_relais' or livraison.statut == 'livree' %}done{% elif livraison.statut == 'attribuee' %}active{% endif %}">
+            <div class="dl-tl-dot"><i class="fa-solid fa-user-check"></i></div>
+            <div class="dl-tl-label">Attribuée</div>
+          </div>
+          <div class="dl-tl-line"></div>
+          <div class="dl-tl-node {% if livraison.statut == 'livree' %}done{% elif livraison.statut == 'en_cours_ramassage' or livraison.statut == 'en_cours_livraison' or livraison.statut == 'deposee_relais' %}active{% endif %}">
+            <div class="dl-tl-dot"><i class="fa-solid fa-truck-fast"></i></div>
+            <div class="dl-tl-label">En cours</div>
+          </div>
+          <div class="dl-tl-line"></div>
+          <div class="dl-tl-node {% if livraison.statut == 'livree' %}done active{% endif %}">
+            <div class="dl-tl-dot"><i class="fa-solid fa-box-open"></i></div>
+            <div class="dl-tl-label">Livrée</div>
+          </div>
+        </div>
+      {% endif %}
+
+      <dl class="row dl-info mb-0">
+        <dt class="col-sm-4">Véhicule</dt><dd class="col-sm-8">{{ livraison.get_type_vehicule_display }}</dd>
+        <dt class="col-sm-4">Mode</dt><dd class="col-sm-8">{{ livraison.get_type_livraison_display }}</dd>
+        <dt class="col-sm-4">Départ</dt><dd class="col-sm-8">{{ livraison.adresse_depart }}, {{ livraison.ville_depart }}</dd>
+        <dt class="col-sm-4">Destination</dt><dd class="col-sm-8">{{ livraison.adresse_destination }}, {{ livraison.ville_destination }}</dd>
+        <dt class="col-sm-4">Destinataire</dt><dd class="col-sm-8">{{ livraison.nom_destinataire }} — {{ livraison.tel_destinataire }}</dd>
+        <dt class="col-sm-4">Quand</dt><dd class="col-sm-8">{% if livraison.livraison_immediate %}Dès que possible{% else %}Programmée le {{ livraison.date_programmee|date:"d/m/Y à H:i" }}{% endif %}</dd>
+        {% if livraison.description_contenu %}<dt class="col-sm-4">Contenu</dt><dd class="col-sm-8">{{ livraison.description_contenu }}</dd>{% endif %}
+        {% if livraison.instructions_speciales %}<dt class="col-sm-4">Instructions</dt><dd class="col-sm-8">{{ livraison.instructions_speciales }}</dd>{% endif %}
+        <dt class="col-sm-4">Montant</dt><dd class="col-sm-8">{{ livraison.montant }} FCFA</dd>
+        <dt class="col-sm-4">Paiement</dt>
+        <dd class="col-sm-8">
+          {% include 'paiement/_mode.html' %} · {% if livraison.payeur == 'destinataire' %}payé par le destinataire{% else %}payé par le client{% endif %}<br>
+          {% include 'paiement/_badge_statut.html' %}
+          {% if livraison.reference_paiement %}<small class="text-muted ms-1">Réf. {{ livraison.reference_paiement }}</small>{% endif %}
+          {% if user.role == 'client' %}{% include 'paiement/_instructions_mobile.html' %}{% endif %}
+        </dd>
+        <dt class="col-sm-4">Demandée le</dt><dd class="col-sm-8">{{ livraison.date_demande|date:"d/m/Y H:i" }}</dd>
+        {% if livraison.date_livraison %}<dt class="col-sm-4">Livrée le</dt><dd class="col-sm-8">{{ livraison.date_livraison|date:"d/m/Y H:i" }}</dd>{% endif %}
+      </dl>
+
+      <!-- ── INFOS LIVREUR ────────────────────────────────────────── -->
+      {% if livraison.livreur %}
+      <div class="dl-livreur-card mt-4">
+        <div class="dl-livreur-avatar">{{ livraison.livreur.utilisateur.prenom|slice:":1"|upper }}{{ livraison.livreur.utilisateur.nom|slice:":1"|upper }}</div>
+        <div>
+          <div class="dl-livreur-name">{{ livraison.livreur }}</div>
+          <div class="dl-livreur-stars">
+            {% with pleines=livraison.livreur.note_moyenne|floatformat:0 %}
+              {{ livraison.livreur.note_moyenne|floatformat:1 }}/5 ⭐
+            {% endwith %}
+          </div>
+          {% if livraison.livreur.vehicule %}
+            <div class="small text-muted">🏍️ {{ livraison.livreur.vehicule }}</div>
+          {% elif livraison.livreur.possede_vehicule_perso %}
+            <div class="small text-muted">🏍️ {{ livraison.livreur.get_type_vehicule_perso_display }} — {{ livraison.livreur.immatriculation_perso }}</div>
+          {% endif %}
+        </div>
+        <div class="dl-livreur-actions">
+          {% if livraison.livreur.utilisateur.telephone %}
+          <a href="tel:{{ livraison.livreur.utilisateur.telephone }}" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-phone"></i> Appeler</a>
+          {% endif %}
+          <a href="#messagerie" class="btn btn-sm btn-primaire-dl"><i class="fa-solid fa-comment"></i> Message</a>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- ── ANNULATION CLIENT ────────────────────────────────────── -->
+      {% if user.role == 'client' and livraison.statut == 'en_attente' %}
+      <div class="mt-4">
+        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalAnnuler{{ livraison.id }}">
+          <i class="fa-solid fa-xmark"></i> Annuler la livraison
+        </button>
+      </div>
+      {% include 'client/_modal_annulation.html' %}
+      {% endif %}
+
+      <!-- ── MISE À JOUR STATUT (LIVREUR) ─────────────────────────── -->
+      {% if user.role == 'livreur' and livraison.livreur and livraison.livreur.utilisateur_id == user.id and livraison.statut in 'attribuee,en_cours_ramassage,en_cours_livraison' %}
+      <hr>
+      <form method="post" action="{% url 'livraison:maj_statut_livraison' livraison.id %}" class="d-flex flex-wrap gap-2">
+        {% csrf_token %}
+        {% if livraison.statut == 'attribuee' %}
+          <button type="submit" name="statut" value="en_cours_ramassage" class="btn btn-primaire-dl btn-sm">Marquer en cours de ramassage</button>
+        {% elif livraison.statut == 'en_cours_ramassage' %}
+          <button type="submit" name="statut" value="en_cours_livraison" class="btn btn-primaire-dl btn-sm">Marquer en cours de livraison</button>
+        {% elif livraison.statut == 'en_cours_livraison' and livraison.type_livraison == 'point_relais' %}
+          <button type="submit" name="statut" value="deposee_relais" class="btn btn-success btn-sm">Déposé au point relais</button>
+        {% elif livraison.statut == 'en_cours_livraison' %}
+          <button type="submit" name="statut" value="livree" class="btn btn-success btn-sm">Marquer comme livrée</button>
+        {% endif %}
+        <button type="submit" name="statut" value="probleme" class="btn btn-outline-warning btn-sm">Signaler un problème</button>
+      </form>
+      {% endif %}
+
+      {% if user.role == 'livreur' and livraison.livreur and livraison.livreur.utilisateur_id == user.id %}
+        {% if livraison.statut == 'attribuee' or livraison.statut == 'en_cours_ramassage' %}
+        <div class="alert alert-info mt-3 mb-2">ℹ️ Vous pouvez encore annuler cette livraison si nécessaire (panne, urgence, erreur d'adresse...).</div>
+        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalAnnuler{{ livraison.id }}">❌ Annuler la livraison</button>
+        {% include 'livreur/_modal_annulation.html' %}
+        {% elif livraison.statut == 'en_cours_livraison' %}
+        <div class="alert alert-warning mt-3 mb-0">🚫 Impossible d'annuler cette livraison : le colis est déjà en route vers le client.</div>
+        {% endif %}
+      {% endif %}
+
+      <!-- ── ÉVALUATION ────────────────────────────────────────────── -->
+      {% if user.role == 'client' and livraison.statut == 'livree' %}
+      <hr id="evaluer">
+      {% if evaluation %}
+        <p class="mb-0">Votre note : <strong>{{ evaluation.note }}/5 ⭐</strong>{% if evaluation.commentaire %} — {{ evaluation.commentaire }}{% endif %}</p>
+      {% else %}
+        <h6 class="mb-2">Évaluer le livreur</h6>
+        <form method="post" action="{% url 'livraison:evaluer_livreur' livraison.id %}">
+          {% csrf_token %}
+          <select name="note" class="form-select mb-2" style="max-width:120px;">
+            <option value="5">5</option><option value="4">4</option><option value="3">3</option>
+            <option value="2">2</option><option value="1">1</option>
+          </select>
+          <textarea name="commentaire" class="form-control mb-2" rows="2" placeholder="Commentaire (optionnel)"></textarea>
+          <button type="submit" class="btn btn-primaire-dl btn-sm">Envoyer l'évaluation</button>
+        </form>
+      {% endif %}
+      {% endif %}
+
+      <!-- ── FACTURE ──────────────────────────────────────────────── -->
+      {% if livraison.facture %}
+      <hr id="facture">
+      <h6 class="mb-2"><i class="fa-solid fa-receipt"></i> Facture {{ livraison.facture.numero }}</h6>
+      <div class="dl-facture-box">
+        <div class="d-flex justify-content-between"><span>Montant HT</span><strong>{{ livraison.facture.montant_ht }} FCFA</strong></div>
+        <div class="d-flex justify-content-between"><span>TVA</span><strong>{{ livraison.facture.tva }} %</strong></div>
+        <div class="d-flex justify-content-between"><span>Montant TTC</span><strong>{{ livraison.facture.montant_ttc }} FCFA</strong></div>
+        <div class="d-flex justify-content-between mt-2"><span>Mode de paiement</span><strong>{{ livraison.libelle_mode_paiement }}</strong></div>
+        {% if livraison.reference_paiement %}<div class="d-flex justify-content-between"><span>Référence paiement</span><strong>{{ livraison.reference_paiement }}</strong></div>{% endif %}
+        <div class="d-flex justify-content-between"><span>Date de paiement</span><strong>{{ livraison.date_paiement|date:"d/m/Y H:i"|default:"—" }}</strong></div>
+        <div class="d-flex justify-content-between"><span>Statut</span>
+          <strong class="{% if livraison.facture.statut == 'payee' %}text-success{% else %}text-warning{% endif %}">{% if livraison.facture.statut == 'payee' %}✅ Payée{% else %}⏳ En attente{% endif %}</strong>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-md-5">
+    <div class="dl-card p-4" id="messagerie">
+      <h5 class="mb-3"><i class="fa-brands fa-whatsapp text-success"></i> Messagerie</h5>
+      <div class="dl-chat-box mb-3">
+        {% for message in messages_livraison %}
+          <div class="dl-msg-row {% if message.expediteur_id == user.id %}mine{% endif %}">
+            <div class="dl-bubble">
+              <small>{{ message.expediteur }}</small>
+              {{ message.contenu }}
+            </div>
+          </div>
+        {% empty %}
+          <p class="text-muted text-center py-3 mb-0">Aucun message pour le moment.</p>
+        {% endfor %}
+      </div>
+      <form method="post" action="{% url 'livraison:envoyer_message' livraison.id %}">
+        {% csrf_token %}
+        <div class="input-group">
+          <input type="text" name="contenu" class="form-control" placeholder="Écrire un message..." required>
+          <button type="submit" class="btn btn-primaire-dl"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
