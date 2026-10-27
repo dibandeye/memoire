@@ -150,6 +150,45 @@
       </div>
       {% endif %}
 
+      <!-- ── SUIVI EN TEMPS RÉEL (CLIENT) ─────────────────────────── -->
+      {% if user.role == 'client' and livraison.statut == 'en_cours_ramassage' or user.role == 'client' and livraison.statut == 'en_cours_livraison' %}
+      <div class="mt-4">
+        <a href="{% url 'livraison:suivre_livraison' livraison.id %}" class="btn btn-primaire-dl"><i class="fa-solid fa-location-crosshairs"></i> Suivre ma livraison</a>
+      </div>
+      {% endif %}
+
+      <!-- ── TRAJET DU LIVREUR (ADMIN) ────────────────────────────── -->
+      {% if user.role == 'admin' %}
+      <hr>
+      <h6 class="mb-2"><i class="fa-solid fa-route"></i> Trajet du livreur</h6>
+      {% if trajet %}
+        <div id="carteTrajet" style="height: 340px; border-radius: 14px; overflow: hidden; z-index: 0;"></div>
+        <small class="text-muted">{{ trajet|length }} position{{ trajet|length|pluralize }} enregistrée{{ trajet|length|pluralize }}.</small>
+        {{ trajet|json_script:"donneesTrajet" }}
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+              integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+                integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+        <script>
+        (function () {
+          const points = JSON.parse(document.getElementById('donneesTrajet').textContent);
+          const carte = L.map('carteTrajet');
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            referrerPolicy: 'strict-origin-when-cross-origin',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          }).addTo(carte);
+          const ligne = L.polyline(points, { color: '#1a237e', weight: 4, opacity: .85 }).addTo(carte);
+          L.circleMarker(points[0], { radius: 7, color: '#fff', weight: 2, fillColor: '#00c853', fillOpacity: 1 }).addTo(carte).bindTooltip('Départ');
+          L.circleMarker(points[points.length - 1], { radius: 7, color: '#fff', weight: 2, fillColor: '#ff6d00', fillOpacity: 1 }).addTo(carte).bindTooltip('Dernière position');
+          if (points.length > 1) { carte.fitBounds(ligne.getBounds(), { padding: [20, 20] }); } else { carte.setView(points[0], 15); }
+        })();
+        </script>
+      {% else %}
+        <p class="text-muted small mb-0">Aucune position GPS enregistrée pour cette livraison.</p>
+      {% endif %}
+      {% endif %}
+
       <!-- ── ANNULATION CLIENT ────────────────────────────────────── -->
       {% if user.role == 'client' and livraison.statut == 'en_attente' %}
       <div class="mt-4">

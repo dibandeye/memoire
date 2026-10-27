@@ -398,6 +398,23 @@ class LivraisonExclusion(models.Model):
         return f"{self.livreur} exclu de la livraison #{self.livraison_id}"
 
 
+# ── POSITION LIVREUR (suivi en temps réel) ─────────────────────────
+class PositionLivreur(models.Model):
+    livreur = models.ForeignKey('Livreur', on_delete=models.CASCADE, related_name='positions')
+    livraison = models.ForeignKey('Livraison', null=True, blank=True, on_delete=models.SET_NULL, related_name='positions')
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    precision = models.FloatField(null=True, blank=True)
+    vitesse = models.FloatField(null=True, blank=True)
+    date_heure = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date_heure']
+
+    def __str__(self):
+        return f"{self.livreur} ({self.latitude}, {self.longitude}) — {self.date_heure:%d/%m/%Y %H:%M:%S}"
+
+
 # ── MESSAGE ────────────────────────────────────────────────────────
 class Message(models.Model):
     livraison    = models.ForeignKey(Livraison,   on_delete=models.CASCADE, related_name='messages')

@@ -18,6 +18,7 @@ urlpatterns = [
     path('client/livraison/<int:pk>/modifier/', views.modifier_livraison, name='modifier_livraison'),
     path('client/notifications/', views.notifications_client, name='notifications_client'),
     path('client/profil/', views.profil_client, name='profil_client'),
+    path('client/livraison/<int:pk>/suivre/', views.suivre_livraison, name='suivre_livraison'),
 
     # Livraisons (communes à tous les rôles autorisés)
     path('livraisons/<int:pk>/', views.detail_livraison, name='detail_livraison'),
@@ -26,6 +27,11 @@ urlpatterns = [
     path('livraisons/<int:pk>/statut/', views.maj_statut_livraison, name='maj_statut_livraison'),
     path('livraisons/<int:pk>/message/', views.envoyer_message, name='envoyer_message'),
     path('livraisons/<int:pk>/attribuer/', views.attribuer_livreur, name='attribuer_livreur'),
+
+    # API JSON — suivi en temps réel des livreurs
+    path('api/position/', views.api_enregistrer_position, name='api_enregistrer_position'),
+    path('api/livraison/<int:pk>/position/', views.api_position_livraison, name='api_position_livraison'),
+    path('api/livreurs-actifs/', views.api_livreurs_actifs, name='api_livreurs_actifs'),
 
     # Espace livreur
     path('livreur/', views.dashboard_livreur, name='dashboard_livreur'),
@@ -52,6 +58,9 @@ urlpatterns = [
     path('admin-panel/livraisons/', views.liste_livraisons_admin, name='liste_livraisons_admin'),
     path('admin-panel/livraisons/<int:pk>/annuler/', views.annuler_livraison_admin, name='annuler_livraison_admin'),
     path('admin-panel/livraisons/<int:pk>/paiement-en-retard/', views.marquer_paiement_en_retard, name='marquer_paiement_en_retard'),
+
+    # Carte des livreurs (suivi en temps réel)
+    path('admin-panel/carte-livreurs/', views.carte_livreurs_admin, name='carte_livreurs_admin'),
 
     # Livreurs
     path('admin-panel/livreurs/', views.liste_livreurs_admin, name='liste_livreurs_admin'),

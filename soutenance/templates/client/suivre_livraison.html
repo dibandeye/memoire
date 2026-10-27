@@ -1,0 +1,102 @@
+{% extends 'client/base_client.html' %}
+{% load livraison_extras %}
+{% block titre %}Suivre ma livraison #{{ livraison.id }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+  .suivi-carte { height: 460px; border-radius: 16px; overflow: hidden; z-index: 0; }
+  .suivi-info { display: flex; flex-wrap: wrap; gap: .6rem 1.4rem; align-items: center; font-size: .9rem; }
+  .suivi-maj { font-weight: 600; color: var(--primary); }
+  .suivi-alerte { background: #fff1e0; color: var(--warning); border-radius: 12px; padding: .6rem 1rem; font-weight: 600; font-size: .9rem; }
+  .marqueur-livreur {
+    width: 38px; height: 38px; border-radius: 50%; background: var(--warning); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 1rem;
+    border: 3px solid #fff; box-shadow: 0 0 0 3px var(--primary), 0 6px 14px rgba(0,0,0,.3);
+  }
+  .marqueur-livreur.perime { background: #9aa0b4; }
+  @media (max-width: 600px) { .suivi-carte { height: 360px; } }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h3 class="page-title mb-0"><i class="fa-solid fa-location-crosshairs"></i> Suivre ma livraison #{{ livraison.id }}</h3>
+  <a href="{% url 'livraison:detail_livraison' livraison.id %}" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-eye"></i> Détails de la livraison</a>
+</div>
+
+<div class="cli-card p-3 p-md-4">
+  <div class="suivi-info mb-3">
+    <span>Statut : <span class="badge-pill-statut {{ livraison.statut|classe_badge_statut }}" id="suiviStatut">{{ livraison.get_statut_display }}</span></span>
+    {% if livraison.livreur %}<span><i class="fa-solid fa-user text-muted"></i> {{ livraison.livreur }}</span>{% endif %}
+    <span><i class="fa-solid fa-location-dot text-muted"></i> {{ livraison.ville_depart }} <i class="fa-solid fa-arrow-right-long mx-1 text-muted"></i> {{ livraison.ville_destination }}</span>
+    <span class="ms-md-auto"><i class="fa-regular fa-clock text-muted"></i> Dernière mise à jour : <span class="suivi-maj" id="suiviMaj">—</span></span>
+  </div>
+  <div class="suivi-alerte mb-3 d-none" id="suiviAlerte"><i class="fa-solid fa-triangle-exclamation"></i> <span>Position indisponible</span></div>
+  <div class="suivi-carte" id="carteSuivi"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function () {
+  const URL_POSITION = "{% url 'livraison:api_position_livraison' livraison.id %}";
+  const DELAI_PERIME = {{ delai_perime_secondes }};
+  const STATUTS_FIN = ['livree', 'annulee', 'deposee_relais', 'probleme', 'non_recupere'];
+
+  const carte = L.map('carteSuivi').setView([14.6928, -17.4467], 12);  // Dakar par défaut
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    referrerPolicy: 'strict-origin-when-cross-origin',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(carte);
+
+  const icone = L.divIcon({ className: '', html: '<div class="marqueur-livreur"><i class="fa-solid fa-motorcycle"></i></div>', iconSize: [38, 38], iconAnchor: [19, 19] });
+  let marqueur = null, premierCentrage = true, minuterie = null;
+
+  const elMaj = document.getElementById('suiviMaj');
+  const elAlerte = document.getElementById('suiviAlerte');
+  const elStatut = document.getElementById('suiviStatut');
+
+  function alerte(texte) {
+    elAlerte.classList.toggle('d-none', !texte);
+    if (texte) elAlerte.querySelector('span').textContent = texte;
+  }
+
+  function rafraichir() {
+    fetch(URL_POSITION, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) {
+        elStatut.textContent = d.statut_libelle;
+        const p = d.position;
+        if (!p) {
+          alerte('Position indisponible : le livreur n\'a pas encore partagé sa position.');
+        } else {
+          const perime = p.age_secondes > DELAI_PERIME;
+          const latlng = [p.latitude, p.longitude];
+          if (!marqueur) {
+            marqueur = L.marker(latlng, { icon: icone }).addTo(carte).bindPopup('Votre livreur');
+          } else {
+            marqueur.setLatLng(latlng);
+          }
+          marqueur.getElement().firstChild.classList.toggle('perime', perime);
+          carte.setView(latlng, 15);
+          elMaj.textContent = p.heure;
+          alerte(perime ? 'Position indisponible : dernière position reçue il y a plus de 2 minutes.' : '');
+        }
+        if (STATUTS_FIN.includes(d.statut)) {
+          clearInterval(minuterie);
+          alerte('Suivi terminé : ' + d.statut_libelle + '.');
+        }
+      })
+      .catch(function () { alerte('Position indisponible : impossible de contacter le serveur.'); });
+  }
+
+  rafraichir();
+  minuterie = setInterval(rafraichir, 5000);
+})();
+</script>
+{% endblock %}

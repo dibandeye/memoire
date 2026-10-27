@@ -1,0 +1,124 @@
+{% extends 'admin/base_admin.html' %}
+{% block titre_admin %}Carte des livreurs{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+  .carte-livreurs { height: calc(100vh - var(--header-h) - 190px); min-height: 420px; border-radius: .5rem; z-index: 0; }
+  .marqueur-livreur {
+    width: 36px; height: 36px; border-radius: 50%; background: #ff6d00; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: .95rem;
+    border: 3px solid #fff; box-shadow: 0 0 0 3px var(--primary), 0 6px 14px rgba(0,0,0,.3);
+  }
+  .marqueur-livreur.perime { background: #9aa0b4; }
+  .popup-livreur { font-size: .85rem; line-height: 1.5; }
+  .popup-livreur strong { color: var(--primary); }
+</style>
+{% endblock %}
+
+{% block contenu_admin %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h3 class="page-title mb-0"><i class="fa-solid fa-map-location-dot"></i> Carte des livreurs</h3>
+  <div class="small text-muted">
+    <span class="badge bg-light text-dark border me-2" id="nbLivreurs">0 livreur actif</span>
+    Mise à jour : <strong id="carteMaj">—</strong> · rafraîchie toutes les 10 s
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body p-2">
+    <div class="alert alert-warning py-2 small mb-2 d-none" id="carteErreur"></div>
+    <div class="carte-livreurs" id="carteLivreurs"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function () {
+  const URL_ACTIFS = "{% url 'livraison:api_livreurs_actifs' %}";
+  const URL_DETAIL = "{% url 'livraison:detail_livraison' 0 %}";
+  const DELAI_PERIME = 120;
+
+  const carte = L.map('carteLivreurs').setView([14.6928, -17.4467], 12);  // Dakar par défaut
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    referrerPolicy: 'strict-origin-when-cross-origin',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(carte);
+
+  const marqueurs = {};  // livreur_id -> L.marker
+  let premierCentrage = true;
+  const elErreur = document.getElementById('carteErreur');
+
+  function echapper(texte) {
+    const div = document.createElement('div');
+    div.textContent = texte == null ? '' : String(texte);
+    return div.innerHTML;
+  }
+
+  function icone(perime) {
+    return L.divIcon({
+      className: '',
+      html: '<div class="marqueur-livreur' + (perime ? ' perime' : '') + '"><i class="fa-solid fa-motorcycle"></i></div>',
+      iconSize: [36, 36], iconAnchor: [18, 18], popupAnchor: [0, -18],
+    });
+  }
+
+  function contenuPopup(l) {
+    const p = l.position;
+    return '<div class="popup-livreur">'
+      + '<strong>' + echapper(l.nom) + '</strong><br>'
+      + '<i class="fa-solid fa-car-side"></i> ' + echapper(l.vehicule) + '<br>'
+      + '<i class="fa-solid fa-box"></i> <a href="' + URL_DETAIL.replace('/0/', '/' + l.livraison_id + '/') + '">Livraison #' + l.livraison_id + '</a>'
+      + ' — ' + echapper(l.statut_libelle) + '<br>'
+      + '<i class="fa-regular fa-clock"></i> ' + echapper(p.heure)
+      + (p.age_secondes > DELAI_PERIME ? ' <span class="text-warning">(position ancienne)</span>' : '')
+      + '</div>';
+  }
+
+  function rafraichir() {
+    fetch(URL_ACTIFS, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) {
+        elErreur.classList.add('d-none');
+        const vus = new Set();
+        d.livreurs.forEach(function (l) {
+          vus.add(String(l.livreur_id));
+          const latlng = [l.position.latitude, l.position.longitude];
+          const perime = l.position.age_secondes > DELAI_PERIME;
+          let m = marqueurs[l.livreur_id];
+          if (!m) {
+            m = marqueurs[l.livreur_id] = L.marker(latlng, { icon: icone(perime) }).addTo(carte).bindPopup('');
+          } else {
+            m.setLatLng(latlng);
+            m.setIcon(icone(perime));
+          }
+          m.setPopupContent(contenuPopup(l));
+        });
+        Object.keys(marqueurs).forEach(function (id) {
+          if (!vus.has(id)) { carte.removeLayer(marqueurs[id]); delete marqueurs[id]; }
+        });
+        if (premierCentrage && d.livreurs.length) {
+          const groupe = L.featureGroup(Object.values(marqueurs));
+          carte.fitBounds(groupe.getBounds(), { padding: [40, 40], maxZoom: 15 });
+          premierCentrage = false;
+        }
+        const n = d.livreurs.length;
+        document.getElementById('nbLivreurs').textContent = n + ' livreur' + (n > 1 ? 's actifs' : ' actif');
+        document.getElementById('carteMaj').textContent = new Date().toLocaleTimeString('fr-FR');
+      })
+      .catch(function () {
+        elErreur.textContent = 'Impossible de récupérer les positions des livreurs. Nouvel essai dans 10 secondes.';
+        elErreur.classList.remove('d-none');
+      });
+  }
+
+  rafraichir();
+  setInterval(rafraichir, 10000);
+})();
+</script>
+{% endblock %}

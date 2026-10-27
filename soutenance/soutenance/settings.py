@@ -7,6 +7,7 @@ SECRET_KEY = 'django-insecure-changez-moi-en-production'
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
+CSRF_TRUSTED_ORIGINS = ['https://drone-letter-unpeeled.ngrok-free.dev']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -33,7 +34,7 @@ ROOT_URLCONF = 'soutenance.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  # ← dossier templates global
+        'DIRS': [BASE_DIR / 'templates'], 
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 from functools import wraps
 
@@ -6,6 +7,7 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
@@ -14,7 +16,7 @@ from django.utils.dateparse import parse_datetime
 from .models import (
     Utilisateur, Client, Livreur, Administrateur,
     Livraison, Message, Evaluation, Notification, Vehicule, LivraisonExclusion, PointRelais,
-    GerantPointRelais,
+    GerantPointRelais, PositionLivreur,
 )
 from .templatetags.livraison_extras import fcfa
 
@@ -578,11 +580,17 @@ def detail_livraison(request, pk):
         messages.error(request, "Accès non autorisé à cette livraison.")
         return _redirection_selon_role(request.user)
 
-    return render(request, 'client/detail_livraison.html', {
+    contexte = {
         'livraison': livraison,
         'messages_livraison': livraison.messages.all(),
         'evaluation': getattr(livraison, 'evaluation', None),
-    })
+    }
+    if request.user.role == 'admin':
+        contexte['trajet'] = [
+            [p.latitude, p.longitude]
+            for p in livraison.positions.order_by('date_heure')
+        ]
+    return render(request, 'client/detail_livraison.html', contexte)
 
 
 @role_required('client')
@@ -2126,3 +2134,159 @@ def envoyer_message(request, pk):
                 messages.warning(request, "Aucun livreur n'est encore assigné à cette livraison.")
 
     return redirect('livraison:detail_livraison', pk=pk)
+
+
+# ── SUIVI EN TEMPS RÉEL DES LIVREURS ─────────────────────────────────
+DELAI_POSITION_PERIMEE = timedelta(minutes=2)
+
+
+def api_role_required(*roles):
+    """Équivalent JSON de role_required : 401 si non connecté, 403 si mauvais rôle."""
+    def decorateur(vue):
+        @wraps(vue)
+        def enveloppe(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return JsonResponse({'erreur': "Authentification requise."}, status=401)
+            if request.user.role not in roles:
+                return JsonResponse({'erreur': "Accès non autorisé."}, status=403)
+            return vue(request, *args, **kwargs)
+        return enveloppe
+    return decorateur
+
+
+def _libelle_vehicule(livreur):
+    vehicule = getattr(livreur, 'vehicule', None)
+    if vehicule:
+        return str(vehicule)
+    if livreur.possede_vehicule_perso:
+        libelle = livreur.get_type_vehicule_perso_display() or "Véhicule personnel"
+        if livreur.immatriculation_perso:
+            libelle += f" — {livreur.immatriculation_perso}"
+        return libelle
+    return "—"
+
+
+def _position_json(position):
+    if position is None:
+        return None
+    date_locale = timezone.localtime(position.date_heure)
+    return {
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+        'precision': position.precision,
+        'vitesse': position.vitesse,
+        'date_heure': date_locale.isoformat(),
+        'heure': date_locale.strftime('%H:%M:%S'),
+        # Calculé côté serveur pour ne pas dépendre de l'horloge du navigateur
+        'age_secondes': int((timezone.now() - position.date_heure).total_seconds()),
+    }
+
+
+def _float_ou_none(valeur):
+    if valeur in (None, ''):
+        return None
+    try:
+        return float(valeur)
+    except (TypeError, ValueError):
+        return None
+
+
+@api_role_required('livreur')
+def api_enregistrer_position(request):
+    if request.method != 'POST':
+        return JsonResponse({'erreur': "Méthode non autorisée."}, status=405)
+
+    if request.content_type == 'application/json':
+        try:
+            donnees = json.loads(request.body or b'{}')
+        except ValueError:
+            return JsonResponse({'erreur': "JSON invalide."}, status=400)
+        if not isinstance(donnees, dict):
+            return JsonResponse({'erreur': "JSON invalide."}, status=400)
+    else:
+        donnees = request.POST
+
+    latitude = _float_ou_none(donnees.get('latitude'))
+    longitude = _float_ou_none(donnees.get('longitude'))
+    if latitude is None or longitude is None or not (-90 <= latitude <= 90) or not (-180 <= longitude <= 180):
+        return JsonResponse({'erreur': "Coordonnées invalides."}, status=400)
+
+    livreur = request.user.livreur_profil
+    livraison = livreur.livraisons.filter(statut__in=STATUTS_MISSION_EN_COURS).first()
+    if livraison is None:
+        return JsonResponse({'erreur': "Aucune livraison en cours."}, status=400)
+
+    position = PositionLivreur.objects.create(
+        livreur=livreur,
+        livraison=livraison,
+        latitude=latitude,
+        longitude=longitude,
+        precision=_float_ou_none(donnees.get('precision')),
+        vitesse=_float_ou_none(donnees.get('vitesse')),
+    )
+    return JsonResponse({
+        'ok': True,
+        'livraison_id': livraison.id,
+        'statut': livraison.statut,
+        'position': _position_json(position),
+    }, status=201)
+
+
+@api_role_required('client', 'admin')
+def api_position_livraison(request, pk):
+    livraison = Livraison.objects.select_related('client').filter(pk=pk).first()
+    if livraison is None:
+        return JsonResponse({'erreur': "Livraison introuvable."}, status=404)
+    if request.user.role == 'client' and livraison.client.utilisateur_id != request.user.id:
+        return JsonResponse({'erreur': "Ce colis ne vous appartient pas."}, status=403)
+
+    return JsonResponse({
+        'livraison_id': livraison.id,
+        'statut': livraison.statut,
+        'statut_libelle': livraison.get_statut_display(),
+        'position': _position_json(
+    livraison.livreur.positions.first() if livraison.livreur_id else livraison.positions.first()
+),
+    })
+
+
+@api_role_required('admin')
+def api_livreurs_actifs(request):
+    livraisons = Livraison.objects.filter(
+        statut__in=STATUTS_MISSION_EN_COURS, livreur__isnull=False
+    ).select_related('livreur__utilisateur', 'livreur__vehicule').order_by('livreur_id', '-date_demande')
+
+    resultats, livreurs_vus = [], set()
+    for livraison in livraisons:
+        livreur = livraison.livreur
+        if livreur.pk in livreurs_vus:
+            continue
+        livreurs_vus.add(livreur.pk)
+        position = livreur.positions.first()
+        if position is None:
+            continue
+        resultats.append({
+            'livreur_id': livreur.pk,
+            'nom': str(livreur),
+            'vehicule': _libelle_vehicule(livreur),
+            'livraison_id': livraison.id,
+            'statut_libelle': livraison.get_statut_display(),
+            'position': _position_json(position),
+        })
+    return JsonResponse({'livreurs': resultats})
+
+
+@role_required('client')
+def suivre_livraison(request, pk):
+    client = request.user.client_profil
+    livraison = get_object_or_404(Livraison.objects.select_related('livreur__utilisateur'), pk=pk, client=client)
+    return render(request, 'client/suivre_livraison.html', {
+        **_contexte_client(client, 'mes_livraisons'),
+        'livraison': livraison,
+        'delai_perime_secondes': int(DELAI_POSITION_PERIMEE.total_seconds()),
+    })
+
+
+@role_required('admin')
+def carte_livreurs_admin(request):
+    return render(request, 'admin/carte_livreurs.html', {'section': 'carte_livreurs'})

@@ -104,8 +104,134 @@
         <i class="fa-solid fa-comment"></i> Détails / Messages
       </a>
     </div>
+
+    <!-- ── PARTAGE DE POSITION GPS ─────────────────────────────── -->
+    <div class="partage-gps mt-3" id="partageGps" data-url="{% url 'livraison:api_enregistrer_position' %}" data-livraison="{{ mission_en_cours.id }}">
+      {% csrf_token %}
+      <button type="button" class="btn btn-orange-liv" id="btnPartagerPosition">
+        <i class="fa-solid fa-location-crosshairs"></i> <span>Partager ma position</span>
+      </button>
+      <span class="gps-etat gps-inactif" id="etatGps"><i class="fa-solid fa-circle"></i> <span>Partage inactif</span></span>
+      <small class="text-muted d-block mt-1" id="detailGps"></small>
+    </div>
   </div>
 </div>
+<style>
+  .partage-gps { border-top: 1px dashed #e5e7eb; padding-top: 1rem; }
+  .btn-orange-liv { background: var(--warning); border-color: var(--warning); color: #fff; font-weight: 600; }
+  .btn-orange-liv:hover { background: #ef6c00; border-color: #ef6c00; color: #fff; }
+  .btn-orange-liv.actif { background: var(--primary); border-color: var(--primary); }
+  .gps-etat { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; font-weight: 600; padding: .3rem .8rem; border-radius: 2rem; margin-left: .5rem; vertical-align: middle; }
+  .gps-etat i { font-size: .55rem; }
+  .gps-inactif { background: #eef0f4; color: #4b5563; }
+  .gps-actif   { background: #e4f5e4; color: #2e7d32; }
+  .gps-actif i { animation: gpsPulse 1.2s ease-in-out infinite; }
+  .gps-refuse  { background: #fff1e0; color: #ef6c00; }
+  .gps-erreur  { background: #fdeaea; color: var(--danger); }
+  @keyframes gpsPulse { 50% { opacity: .25; } }
+</style>
+<script>
+(function () {
+  const bloc = document.getElementById('partageGps');
+  const bouton = document.getElementById('btnPartagerPosition');
+  const etat = document.getElementById('etatGps');
+  const detail = document.getElementById('detailGps');
+  const csrf = bloc.querySelector('input[name="csrfmiddlewaretoken"]').value;
+  const CLE_STOCKAGE = 'partageGps_' + bloc.dataset.livraison;
+  const INTERVALLE_MS = 7000;
+  const STATUTS_FIN = ['livree', 'annulee', 'deposee_relais', 'probleme'];
+
+  let watchId = null, dernierEnvoi = 0, enAttente = null, minuterie = null, envoiEnCours = false;
+
+  function memoriser(actif) {
+    try { actif ? sessionStorage.setItem(CLE_STOCKAGE, '1') : sessionStorage.removeItem(CLE_STOCKAGE); } catch (e) {}
+  }
+
+  function afficherEtat(classe, texte, info) {
+    etat.className = 'gps-etat gps-' + classe;
+    etat.querySelector('span').textContent = texte;
+    detail.textContent = info || '';
+    const actif = classe === 'actif';
+    bouton.classList.toggle('actif', actif);
+    bouton.querySelector('span').textContent = actif ? 'Arrêter le partage' : 'Partager ma position';
+  }
+
+  function arreter(classe, texte, info) {
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    watchId = null; enAttente = null;
+    clearTimeout(minuterie); minuterie = null;
+    memoriser(false);
+    afficherEtat(classe || 'inactif', texte || 'Partage inactif', info);
+  }
+
+  function envoyer() {
+    minuterie = null;
+    if (!enAttente || envoiEnCours || watchId === null) return;
+    const c = enAttente.coords;
+    enAttente = null;
+    envoiEnCours = true;
+    dernierEnvoi = Date.now();
+    fetch(bloc.dataset.url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+      body: JSON.stringify({ latitude: c.latitude, longitude: c.longitude, precision: c.accuracy, vitesse: c.speed }),
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, status: r.status, data: d }; }); })
+      .then(function (rep) {
+        if (rep.status === 400 && rep.data.erreur === 'Aucune livraison en cours.') {
+          arreter('inactif', 'Partage terminé', 'La livraison n\'est plus en cours.');
+        } else if (!rep.ok) {
+          afficherEtat('erreur', 'Erreur', rep.data.erreur || ('Erreur serveur (' + rep.status + ')'));
+        } else if (STATUTS_FIN.includes(rep.data.statut)) {
+          arreter('inactif', 'Partage terminé', 'Statut de la livraison : ' + rep.data.statut + '.');
+        } else if (watchId !== null) {
+          let info = 'Dernier envoi à ' + rep.data.position.heure + ' (précision ± ' + Math.round(c.accuracy) + ' m)';
+          // Au-delà de 100 m, la position vient du Wi-Fi / de l'IP (ou d'une simulation), pas du GPS
+          if (c.accuracy > 100) info += ' — position approximative : activez le GPS du téléphone.';
+          afficherEtat('actif', 'Partage actif', info);
+        }
+      })
+      .catch(function () {
+        if (watchId !== null) afficherEtat('erreur', 'Erreur', 'Envoi impossible (connexion réseau ?). Nouvel essai à la prochaine position.');
+      })
+      .finally(function () { envoiEnCours = false; planifier(); });
+  }
+
+  function planifier() {
+    if (!enAttente || minuterie || envoiEnCours) return;
+    const reste = Math.max(0, INTERVALLE_MS - (Date.now() - dernierEnvoi));
+    minuterie = setTimeout(envoyer, reste);
+  }
+
+  function demarrer() {
+    if (!('geolocation' in navigator)) {
+      afficherEtat('erreur', 'Erreur', 'La géolocalisation n\'est pas prise en charge par ce navigateur.');
+      return;
+    }
+    afficherEtat('actif', 'Partage actif', 'Recherche de la position GPS…');
+    memoriser(true);
+    watchId = navigator.geolocation.watchPosition(
+      function (pos) { enAttente = pos; planifier(); },
+      function (err) {
+        if (err.code === err.PERMISSION_DENIED) {
+          arreter('refuse', 'Accès refusé', 'Autorisez la localisation dans les réglages du navigateur pour partager votre position.');
+        } else {
+          afficherEtat('erreur', 'Erreur', err.code === err.TIMEOUT ? 'Délai dépassé pour obtenir la position.' : 'Position indisponible (GPS désactivé ?).');
+        }
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
+    );
+  }
+
+  bouton.addEventListener('click', function () { watchId === null ? demarrer() : arreter(); });
+
+  // Reprise automatique après un rechargement (ex. passage en « en cours de livraison »)
+  let reprendre = false;
+  try { reprendre = sessionStorage.getItem(CLE_STOCKAGE) === '1'; } catch (e) {}
+  if (reprendre) demarrer();
+})();
+</script>
 {% endif %}
 
 <!-- ── MISSIONS ASSIGNÉES EN ATTENTE ────────────────────────────── -->
